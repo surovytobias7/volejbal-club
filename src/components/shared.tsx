@@ -1,0 +1,153 @@
+import Link from "next/link";
+import { ArrowUpRight, CalendarDays, MapPin, Volleyball } from "lucide-react";
+import type { ReactNode } from "react";
+import { dateTime } from "@/lib/utils";
+export function PageHeading({
+  title,
+  description,
+  action,
+}: {
+  title: string;
+  description: string;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="page-heading">
+      <div>
+        <h1>{title}</h1>
+        <p className="muted">{description}</p>
+      </div>
+      {action}
+    </div>
+  );
+}
+export function Empty({
+  title = "Zatiaľ tu nič nie je",
+  description,
+}: {
+  title?: string;
+  description: string;
+}) {
+  return (
+    <div className="empty-state">
+      <span className="empty-icon">
+        <Volleyball size={30} strokeWidth={1.4} />
+      </span>
+      <h3>{title}</h3>
+      <p className="muted">{description}</p>
+    </div>
+  );
+}
+export function Panel({
+  title,
+  children,
+  href,
+  label = "Zobraziť všetko",
+}: {
+  title: string;
+  children: ReactNode;
+  href?: string;
+  label?: string;
+}) {
+  return (
+    <section className="panel">
+      <div className="panel-heading">
+        <h2>{title}</h2>
+        {href && (
+          <Link className="text-link" href={href}>
+            {label}
+            <ArrowUpRight size={16} />
+          </Link>
+        )}
+      </div>
+      {children}
+    </section>
+  );
+}
+export const kindNames: Record<string, string> = {
+  training: "Tréning",
+  match: "Zápas",
+  tournament: "Turnaj",
+  meeting: "Stretnutie",
+  other: "Udalosť",
+};
+export type EventRow = {
+  id: string;
+  title: string;
+  kind: string;
+  starts_at: string;
+  ends_at: string;
+  venue: string;
+  status: string;
+  team_id: string;
+  description?: string;
+  opponent?: string | null;
+  score?: string | null;
+  pending_count?: number;
+  participant_count?: number;
+};
+export function EventList({
+  events,
+  teams = {},
+  preview = false,
+}: {
+  events: EventRow[];
+  teams?: Record<string, string>;
+  preview?: boolean;
+}) {
+  if (!events.length)
+    return (
+      <Empty
+        title="Ihrisko má zatiaľ voľno"
+        description="Naplánované tréningy a zápasy sa zobrazia na tomto mieste."
+      />
+    );
+  return (
+    <div className="event-list">
+      {events.map((e) => (
+        <Link
+          className="event-row"
+          href={preview ? "/ukazka?view=kalendar" : `/klub/kalendar/${e.id}`}
+          key={e.id}
+        >
+          <div className="event-date">
+            <strong>{dateTime(e.starts_at, "dd")}</strong>
+            <span>{dateTime(e.starts_at, "MMM")}</span>
+          </div>
+          <div className={`event-stripe ${e.kind}`} />
+          <div className="event-info">
+            <div className="event-meta">
+              <span className={`badge ${e.kind}`}>{kindNames[e.kind]}</span>
+              <span>{teams[e.team_id]}</span>
+              {e.status === "scheduled" && !!e.participant_count && (
+                <span
+                  className={`badge ${e.pending_count ? "match" : "success"}`}
+                >
+                  {e.pending_count
+                    ? `Čaká na odpoveď: ${e.pending_count}`
+                    : "Všetci odpovedali"}
+                </span>
+              )}
+              {e.status === "cancelled" && (
+                <span className="badge danger">Zrušené</span>
+              )}
+            </div>
+            <h3>{e.title}</h3>
+            <p>
+              <span>
+                <CalendarDays size={13} />
+                {dateTime(e.starts_at, "EEEE, HH:mm")} –{" "}
+                {dateTime(e.ends_at, "HH:mm")}
+              </span>
+              <span>
+                <MapPin size={13} />
+                {e.venue}
+              </span>
+            </p>
+          </div>
+          <ArrowUpRight className="event-arrow" size={18} />
+        </Link>
+      ))}
+    </div>
+  );
+}
