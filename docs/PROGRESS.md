@@ -2,6 +2,11 @@
 
 ## Current live milestone (supersedes the historical entries below)
 
+- Browser continuation: authenticated T3 checks passed for administrator settings persistence, venue/category defaults, two weekly events across Bratislava DST (22/29 October at 18:00), coach single-occurrence venue edit and actual attendance, guardian independent sibling response, and player own response/contact persistence. Desktop 1280x800 and mobile 390x844 were used; this is selected workflow coverage, not the complete role/device matrix. Details in M4_LIVE_ACCEPTANCE.md.
+- Fixed reproduced UI issues: settings/audit/brand links now close mobile navigation; admin links indicate the active page; utility pages and fee plans show the correct section label. Verified mobile settings/audit navigation and Escape focus return in the rebuilt production app. Inaccessible/missing event details now show a Slovak unavailable page; actual database failures remain errors. Player denial and nonexistent UUID both verified, accessible event still works.
+- User confirmed no domain yet. Added [SMTP_SETUP.md](SMTP_SETUP.md) with Resend/domain/DNS setup and delivery acceptance. Domain registration and provider configuration require manual action; no template PATCH retry, email send, purchase or upgrade this continuation.
+- Final code checks: `npm run check`, `npm test` (113 tests / eight files), `npm run build` passed after both fixes. Existing Vitest configuration warning remains. No push, deployment, destructive cleanup or schema change. Existing uncommitted work preserved. Graphify reused without rebuilding (no extraction tokens; overall session token cost unavailable).
+
 - New `live-auth-links.mjs --write-test-data`: 10 live invite/recovery checks passed using internally generated links, no mail sent. Real `/auth/confirm` and password Server Action tested, one-use tokens enforced, new-password login verified, unlinked identity denied club profiles. One fictional unlinked Auth identity retained; no automatic deletion. This is not email-delivery or Auth/profile invitation-linking acceptance.
 
 - Dedicated fictional-data Supabase project configured: 17 applied migrations, 18 public tables with RLS, 19 public RPCs. Test Auth accounts and administrator bootstrap installed. No production records or deployment.

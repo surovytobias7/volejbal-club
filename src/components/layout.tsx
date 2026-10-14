@@ -37,6 +37,17 @@ const links = [
     finance: true,
   },
 ];
+const adminLinks = [
+  { href: "/klub/nastavenia", label: "Nastavenia klubu", icon: Settings },
+  { href: "/klub/audit", label: "História zmien", icon: ShieldCheck },
+];
+const sectionLabels = [
+  { href: "/klub/platby/plany", label: "Plány členského" },
+  ...links,
+  ...adminLinks,
+  { href: "/klub/profil", label: "Môj profil" },
+  { href: "/klub/notifikacie", label: "Upozornenia" },
+];
 export function Shell({
   children,
   name,
@@ -115,7 +126,11 @@ export function Shell({
         aria-modal={open ? true : undefined}
         aria-label="Klubová navigácia"
       >
-        <Link href={preview ? "/ukazka" : "/klub"} className="brand">
+        <Link
+          href={preview ? "/ukazka" : "/klub"}
+          className="brand"
+          onClick={() => setOpen(false)}
+        >
           {logo ? (
             <Image
               src={logo}
@@ -179,18 +194,20 @@ export function Shell({
             <strong>Jeden klub. Jeden tím.</strong>
             <p>Všetko dôležité, na jednom mieste.</p>
           </div>
-          {admin && !preview && (
-            <Link className="nav-link" href="/klub/nastavenia">
-              <Settings size={19} />
-              Nastavenia klubu
-            </Link>
-          )}
-          {admin && !preview && (
-            <Link className="nav-link" href="/klub/audit">
-              <ShieldCheck size={19} />
-              História zmien
-            </Link>
-          )}
+          {admin &&
+            !preview &&
+            adminLinks.map((link) => (
+              <Link
+                key={link.href}
+                className={`nav-link ${pathname === link.href ? "active" : ""}`}
+                href={link.href}
+                aria-current={pathname === link.href ? "page" : undefined}
+                onClick={() => setOpen(false)}
+              >
+                <link.icon size={19} aria-hidden />
+                {link.label}
+              </Link>
+            ))}
           <div className="sidebar-profile">
             <span className="avatar">
               {name
@@ -220,8 +237,10 @@ export function Shell({
             Klubový priestor <span>/</span>{" "}
             {preview
               ? "Ukážka rozhrania"
-              : links.find(
-                  (l) => l.href !== "/klub" && pathname.startsWith(l.href),
+              : sectionLabels.find(
+                  (l) =>
+                    l.href !== "/klub" &&
+                    (pathname === l.href || pathname.startsWith(`${l.href}/`)),
                 )?.label || "Prehľad"}
           </span>
           <div className="topbar-actions">

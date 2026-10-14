@@ -39,9 +39,15 @@ export default async function EventDetail({
   const { id } = await params;
   if (!z.uuid().safeParse(id).success) notFound();
   const v = await requireViewer();
-  const event = one(
-    await v.db.from("events").select("*").eq("id", id).single(),
-  );
+  const eventResult = await v.db
+    .from("events")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  // RLS-hidden and missing events have the same result. Real query failures
+  // still reach the error boundary instead of looking like an empty record.
+  if (!eventResult.error && !eventResult.data) notFound();
+  const event = one(eventResult);
   const search = await searchParams;
   const q = directoryQuery(search);
   const cursor = directoryCursor(search);
