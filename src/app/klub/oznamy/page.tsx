@@ -125,7 +125,7 @@ export default async function Announcements({
         </Link>
       </form>
       {page.items.length ? (
-        <div className="stack">
+        <div className="stack announcement-feed">
           {page.items.map((a) => (
             <Panel key={a.id} title={a.title}>
               <div className="panel-body">

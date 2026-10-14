@@ -1,7 +1,8 @@
 export default function Loading() {
   return (
-    <div className="stack" role="status" aria-label="Načítavam">
-      <div className="skeleton" />
+    <div className="stack" role="status" aria-label="Načítavam…">
+      <p className="loading-label">Načítavam klubový priestor…</p>
+      <div className="skeleton" aria-hidden />
       <div className="dashboard-stats">
         {[1, 2, 3, 4].map((i) => (
           <div className="skeleton" key={i} />

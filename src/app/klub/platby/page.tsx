@@ -80,7 +80,7 @@ export default async function Payments({
           )
         }
       />
-      <div className="dashboard-stats">
+      <div className="dashboard-stats finance-summary">
         <div className="stat">
           <span className="muted">Predpísané členské</span>
           <strong>{money(summary.charged)}</strong>

@@ -7,14 +7,7 @@ import {
   ArrowUpRight,
   Activity,
 } from "lucide-react";
-import {
-  PageHeading,
-  Panel,
-  EventList,
-  Empty,
-  type EventRow,
-} from "@/components/shared";
-import { Button } from "@/components/ui/button";
+import { Panel, EventList, Empty, type EventRow } from "@/components/shared";
 import { money, dateTime } from "@/lib/utils";
 import type { GuardianChild } from "@/lib/guardian-dashboard";
 import type { Role } from "@/lib/auth";
@@ -55,6 +48,8 @@ export function Dashboard({
   const admin = roles.includes("admin");
   const coach = roles.includes("coach");
   const guardian = roles.includes("guardian");
+  const nextEvent = data.events.find((event) => event.status === "scheduled");
+  const calendarHref = preview ? "/ukazka?view=kalendar" : "/klub/kalendar";
   const description = admin
     ? "Všetko dôležité o vašom klube. Pripravení na ďalší spoločný deň."
     : coach
@@ -110,22 +105,53 @@ export function Dashboard({
   ];
   return (
     <>
-      <PageHeading
-        title={`Dobrý deň, ${data.name.split(" ")[0]}`}
-        description={description}
-        action={
-          <Button asChild variant="secondary">
-            <Link href={preview ? "/ukazka?view=kalendar" : "/klub/kalendar"}>
-              <CalendarDays size={16} />
-              Otvoriť kalendár
-            </Link>
-          </Button>
-        }
-      />
+      <div className="dashboard-hero">
+        <div className="dashboard-welcome">
+          <h1>{`Dobrý deň, ${data.name.split(" ")[0]}`}</h1>
+          <p>{description}</p>
+          <Link className="text-link" href={calendarHref}>
+            <CalendarDays size={17} aria-hidden /> Otvoriť kalendár
+          </Link>
+        </div>
+        {nextEvent ? (
+          <Link
+            className="next-session"
+            href={preview ? calendarHref : `/klub/kalendar/${nextEvent.id}`}
+          >
+            <div className="next-session-label">
+              <span>Najbližšie na ihrisku</span>
+              <ArrowUpRight size={19} aria-hidden />
+            </div>
+            <div className="next-session-time">
+              <strong>{dateTime(nextEvent.starts_at, "HH:mm")}</strong>
+              <span>{dateTime(nextEvent.starts_at, "EEEE, d. MMMM")}</span>
+            </div>
+            <h2>{nextEvent.title}</h2>
+            <p>
+              {data.teams[nextEvent.team_id]}
+              <br />
+              {nextEvent.venue}
+            </p>
+          </Link>
+        ) : (
+          <div className="next-session">
+            <CalendarDays size={26} aria-hidden />
+            <h2>Priestor na ďalší tréning</h2>
+            <p>
+              Keď pribudne nová udalosť, jej čas a miesto nájdete priamo tu.
+            </p>
+          </div>
+        )}
+      </div>
       {!!data.pendingCount && (
-        <div className="notice">
-          <strong>{data.pendingCount} odpovedí na účasť ešte chýba.</strong>{" "}
-          Skontrolujte potvrdenia pri najbližších piatich udalostiach.
+        <div className="notice notice-action">
+          <div>
+            <strong>Čakáme na odpovede: {data.pendingCount}.</strong> Pri
+            najbližších piatich udalostiach ešte nie je potvrdená účasť.
+          </div>
+          <Link href={calendarHref} className="text-link">
+            Skontrolovať účasť <ArrowUpRight size={16} aria-hidden />
+          </Link>
         </div>
       )}
       <div className="dashboard-stats">
@@ -134,7 +160,7 @@ export function Dashboard({
             <div className="stat-top">
               <span>{s.label}</span>
               <span className="stat-icon">
-                <s.icon size={17} />
+                <s.icon size={17} aria-hidden />
               </span>
             </div>
             <strong>{s.value}</strong>
@@ -149,7 +175,10 @@ export function Dashboard({
               <Panel title="Vaše deti">
                 {data.children?.length ? (
                   data.children.map((child) => (
-                    <article className="announcement-item" key={child.id}>
+                    <article
+                      className="announcement-item child-summary"
+                      key={child.id}
+                    >
                       <div className="metric-line">
                         <h3>{child.full_name}</h3>
                         <Link
@@ -303,12 +332,19 @@ export function Dashboard({
             </Panel>
           )}
           <div className="feature-card">
-            <div className="court" aria-hidden />
-            <span className="badge lime">Klubový život</span>
-            <h2>Na každý tréning pripravení.</h2>
+            <h2>
+              {admin
+                ? "Klub pod kontrolou"
+                : coach
+                  ? "Príprava na tréning"
+                  : "Pripravení na ihrisko"}
+            </h2>
             <p>
-              Potvrďte účasť v detaile udalosti. Tréner tak vie, s kým môže
-              počítať.
+              {admin
+                ? "Členská evidencia, program a klubové správy. Najčastejšie úlohy máte poruke."
+                : coach
+                  ? "Otvorte tréning, skontrolujte odpovede a zaznamenajte skutočnú účasť."
+                  : "Potvrďte účasť v detaile udalosti. Tréner tak vie, s kým môže počítať."}
             </p>
             <Link
               className="text-link"
@@ -316,6 +352,22 @@ export function Dashboard({
             >
               Pozrieť program <ArrowUpRight size={16} />
             </Link>
+            {admin && (
+              <Link
+                className="metric-line"
+                href={preview ? "/ukazka?view=clenovia" : "/klub/clenovia"}
+              >
+                Členská evidencia <Users size={17} aria-hidden />
+              </Link>
+            )}
+            {(admin || coach) && (
+              <Link
+                className="metric-line"
+                href={preview ? "/ukazka?view=oznamy" : "/klub/oznamy"}
+              >
+                Klubové oznamy <ArrowUpRight size={17} aria-hidden />
+              </Link>
+            )}
           </div>
           <Panel
             title="Klubová nástenka"

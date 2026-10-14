@@ -78,7 +78,7 @@ export default async function Attendance({
           Zrušiť filtre
         </Link>
       </form>
-      <div className="dashboard-stats">
+      <div className="dashboard-stats attendance-summary">
         <div className="stat">
           <span className="muted">Zaznamenaná účasť</span>
           <strong>

@@ -21,10 +21,19 @@ export async function MemberProfile({ id }: { id: string }) {
   if (!profile.data) notFound();
   return (
     <>
-      <PageHeading
-        title={profile.data.full_name}
-        description="Členský profil a kontakty dostupné podľa vašich oprávnení."
-      />
+      <div className="profile-heading">
+        <span className="profile-avatar" aria-hidden>
+          {profile.data.full_name
+            .split(" ")
+            .map((part) => part[0])
+            .slice(0, 2)
+            .join("")}
+        </span>
+        <PageHeading
+          title={profile.data.full_name}
+          description="Členský profil a kontakty dostupné podľa vašich oprávnení."
+        />
+      </div>
       <div className="two-columns">
         <Panel title="Kontaktné informácie">
           <div className="panel-body">

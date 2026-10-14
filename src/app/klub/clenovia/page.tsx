@@ -72,7 +72,8 @@ export default async function Members({
             name="q"
             maxLength={160}
             defaultValue={q}
-            placeholder="Meno alebo priezvisko"
+            placeholder="Meno alebo priezvisko…"
+            autoComplete="off"
           />
         </label>
         <Button variant="secondary">Hľadať</Button>
@@ -93,12 +94,23 @@ export default async function Members({
                 {members.map((p) => (
                   <tr key={p.id}>
                     <td>
-                      <strong>{p.full_name}</strong>
-                      <small>
-                        {p.user_id
-                          ? "Prepojený účet"
-                          : "Bez prihlasovacieho účtu"}
-                      </small>
+                      <div className="member-identity">
+                        <span className="avatar" aria-hidden>
+                          {p.full_name
+                            .split(" ")
+                            .map((part) => part[0])
+                            .slice(0, 2)
+                            .join("")}
+                        </span>
+                        <div>
+                          <strong>{p.full_name}</strong>
+                          <small>
+                            {p.user_id
+                              ? "Prepojený účet"
+                              : "Bez prihlasovacieho účtu"}
+                          </small>
+                        </div>
+                      </div>
                     </td>
                     <td>{p.roles.map((r) => roleNames[r]).join(", ")}</td>
                     <td>

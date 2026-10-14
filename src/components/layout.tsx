@@ -223,7 +223,7 @@ export function Shell({
           </div>
         </div>
       </aside>
-      <div className="workspace">
+      <div className="workspace" inert={open ? true : undefined}>
         <header className="topbar">
           <button
             className="icon-button mobile-menu"
@@ -234,7 +234,9 @@ export function Shell({
             <Menu />
           </button>
           <span className="breadcrumb">
-            Klubový priestor <span>/</span>{" "}
+            <span className="breadcrumb-root">
+              Klubový priestor <span>/</span>
+            </span>{" "}
             {preview
               ? "Ukážka rozhrania"
               : sectionLabels.find(
