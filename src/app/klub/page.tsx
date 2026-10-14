@@ -3,8 +3,15 @@ import { requireViewer } from "@/lib/auth";
 import { rows, one } from "@/lib/data";
 import { financeSummarySchema } from "@/lib/finance";
 import { dashboardSummarySchema } from "@/lib/directories";
-export default async function DashboardPage() {
+import { guardianDashboardSchema } from "@/lib/guardian-dashboard";
+import { z } from "zod";
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ childAfter?: string }>;
+}) {
   const v = await requireViewer();
+  const childAfter = z.uuid().safeParse((await searchParams).childAfter).data;
   const reminders = await v.db.rpc("refresh_my_reminders");
   if (reminders.error) throw new Error("Pripomienky sa nepodarilo načítať.");
   const at = new Date().toISOString();
@@ -35,15 +42,7 @@ export default async function DashboardPage() {
       .order("id")
       .limit(3),
     v.db.rpc("finance_summary", { p_charge_id: null }),
-    v.db
-      .from("guardian_players")
-      .select(
-        "player_id,profiles!guardian_players_player_id_fkey(id,full_name)",
-        { count: "exact" },
-      )
-      .eq("guardian_id", v.id)
-      .order("player_id")
-      .limit(4),
+    v.db.rpc("guardian_dashboard", { p_at: at, p_after: childAfter ?? null }),
     v.db
       .from("teams")
       .select("id,name")
@@ -62,6 +61,7 @@ export default async function DashboardPage() {
   ]);
   const stats = dashboardSummarySchema.parse(one(statistics));
   const summary = financeSummarySchema.parse(one(charges));
+  const family = guardianDashboardSchema.parse(one(children));
   const upcoming = rows(events);
   const teamIds = [...new Set(upcoming.map((e) => e.team_id))];
   const teams = teamIds.length
@@ -87,7 +87,12 @@ export default async function DashboardPage() {
         teamCards: Object.fromEntries(
           rows(visibleTeams).map((t) => [t.id, t.name]),
         ),
-        childCount: children.count ?? 0,
+        childCount: family.total,
+        childContinued: !!childAfter,
+        childNextHref:
+          family.has_more && family.items.at(-1)
+            ? `/klub?childAfter=${family.items.at(-1)!.id}#deti`
+            : undefined,
         recentActivity: rows(activity).map((a) => ({
           id: a.id,
           created_at: a.created_at,
@@ -112,9 +117,7 @@ export default async function DashboardPage() {
             )[a.table_name] ?? "Klubová evidencia",
         })),
         announcements: rows(announcements),
-        children: rows(children).map(
-          (c) => c.profiles as unknown as { id: string; full_name: string },
-        ),
+        children: family.items,
       }}
     />
   );

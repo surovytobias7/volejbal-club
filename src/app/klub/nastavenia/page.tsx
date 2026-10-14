@@ -52,7 +52,8 @@ export default async function Settings() {
                   name: "categories",
                   label: "Tímové kategórie",
                   value: club.categories.join(", "),
-                  hint: "Kategórie oddeľte čiarkou, napríklad U14, U16, U18, Seniori.",
+                  required: false,
+                  hint: "Kategórie oddeľte čiarkou, napríklad U14, U16, U18, Seniori. Najviac 50 znakov na kategóriu. Prázdny zoznam umožní vlastnú kategóriu pri tvorbe tímu.",
                 },
               ]}
             />

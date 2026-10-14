@@ -3,6 +3,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { eventRosterSchema, teamRosterSchema } from "../../src/lib/rosters";
 import { calendarPageSchema } from "../../src/lib/calendar-data";
+import { guardianDashboardSchema } from "../../src/lib/guardian-dashboard";
 import {
   attendancePageSchema,
   announcementPageSchema,
@@ -95,6 +96,256 @@ afterAll(async () => {
 });
 
 describe("PostgreSQL row-level authorization", () => {
+  const family = async (after: string | null = null) =>
+    guardianDashboardSchema.parse(
+      (
+        await db.query<{ data: unknown }>(
+          "select public.guardian_dashboard('2026-12-01'::timestamptz,$1) as data",
+          [after],
+        )
+      ).rows[0].data,
+    );
+  it("shows each child's own event, response, attendance and corrected balance", async () => {
+    await as(ids.admin);
+    await db.query(
+      "insert into public.payments(charge_id,amount_cents,note) values($1,1500,'Partial payment')",
+      [ids.charge],
+    );
+    await db.query(
+      "insert into public.charge_adjustments(charge_id,new_total_cents,note) values($1,4500,'Corrected fee')",
+      [ids.charge],
+    );
+    await db.query(
+      "insert into public.attendance(event_id,player_id,status) values($1,$2,'present')",
+      [ids.event, ids.child],
+    );
+    await as(ids.parent);
+    await db.query(
+      "insert into public.availability(event_id,player_id,response) values($1,$2,'yes')",
+      [ids.event, ids.child],
+    );
+    const result = await family();
+    expect(result.total).toBe(2);
+    expect(result.items[0]).toMatchObject({
+      id: ids.child,
+      remaining: 3000,
+      attendance: { recorded: 1, present: 1 },
+      next_event: { id: ids.event, response: "yes" },
+    });
+    expect(result.items[1]).toMatchObject({
+      id: ids.sibling,
+      remaining: 0,
+      attendance: { recorded: 0, present: 0 },
+      next_event: { id: ids.event, response: null },
+    });
+  });
+  it.each(["coach", "child", "stranger", "admin", "inactive"] as const)(
+    "does not expose guardian summaries to unrelated %s",
+    async (role) => {
+      await as(ids[role]);
+      expect(await family()).toEqual({ items: [], has_more: false, total: 0 });
+    },
+  );
+  it("revokes a family summary immediately when a relationship is removed", async () => {
+    await as(ids.parent);
+    expect((await family()).total).toBe(2);
+    await as(ids.admin);
+    await db.query(
+      "delete from public.guardian_players where guardian_id=$1 and player_id=$2",
+      [ids.parent, ids.child],
+    );
+    await as(ids.parent);
+    expect((await family()).items.map((c) => c.id)).toEqual([ids.sibling]);
+  });
+  it("excludes inactive children and cancelled events without losing empty histories", async () => {
+    await as(ids.admin);
+    await db.query("update public.profiles set active=false where id=$1", [
+      ids.child,
+    ]);
+    await db.query("update public.events set status='cancelled' where id=$1", [
+      ids.event,
+    ]);
+    await as(ids.parent);
+    const result = await family();
+    expect(result.total).toBe(1);
+    expect(result.items[0]).toMatchObject({
+      id: ids.sibling,
+      next_event: null,
+      remaining: 0,
+      attendance: { recorded: 0, present: 0 },
+    });
+  });
+  it("paginates family links without duplicate or missing children", async () => {
+    await as(ids.admin);
+    await db.exec(`insert into public.profiles(id,full_name) select ('00000000-0000-4000-8000-' || lpad(n::text,12,'0'))::uuid,'Extra child' from generate_series(100,106) n;
+      insert into public.user_roles(profile_id,role) select id,'player' from public.profiles where full_name='Extra child';
+      insert into public.guardian_players(guardian_id,player_id) select '${ids.parent}',id from public.profiles where full_name='Extra child';`);
+    await as(ids.parent);
+    const first = await family();
+    const second = await family(first.items.at(-1)!.id);
+    const third = await family(second.items.at(-1)!.id);
+    expect([
+      first.items.length,
+      second.items.length,
+      third.items.length,
+    ]).toEqual([4, 4, 1]);
+    expect([first.has_more, second.has_more, third.has_more]).toEqual([
+      true,
+      true,
+      false,
+    ]);
+    expect(
+      new Set(
+        [...first.items, ...second.items, ...third.items].map((c) => c.id),
+      ).size,
+    ).toBe(9);
+    expect(third.total).toBe(9);
+  });
+  it("keeps a coach-parent scoped to their own children", async () => {
+    await as(ids.admin);
+    await db.query(
+      "insert into public.user_roles(profile_id,role) values($1,'coach')",
+      [ids.parent],
+    );
+    await db.query(
+      "insert into public.team_memberships(team_id,profile_id,kind) values($1,$2,'coach')",
+      [ids.other, ids.parent],
+    );
+    await as(ids.parent);
+    expect((await family()).items.map((c) => c.id)).toEqual([
+      ids.child,
+      ids.sibling,
+    ]);
+  });
+  it("paginates more than 1,000 plans without losing duplicate names", async () => {
+    await as(ids.admin);
+    await db.exec(
+      "insert into public.fee_plans(name,amount_cents) select 'Same name',3500 from generate_series(1,1001)",
+    );
+    const seen = new Set<string>();
+    let after: string | null = null;
+    while (true) {
+      const result: { rows: { id: string }[] } = await db.query(
+        "select id from public.fee_plans where not archived and ($1::uuid is null or id > $1) order by id limit 26",
+        [after],
+      );
+      for (const item of result.rows.slice(0, 25)) {
+        expect(seen.has(item.id)).toBe(false);
+        seen.add(item.id);
+      }
+      if (result.rows.length <= 25) break;
+      after = result.rows[24].id;
+    }
+    expect(seen.size).toBe(1001);
+  });
+  it("keeps issued amounts and periods intact after audited plan edits and archival", async () => {
+    await as(ids.admin);
+    await db.query(
+      "insert into public.fee_plans(id,name,amount_cents) values($1,'Season',3500)",
+      [uid(90)],
+    );
+    await db.query(
+      "insert into public.charges(id,player_id,plan_id,label,amount_cents,due_date,period_start,period_end) values($1,$2,$3,'Season',3500,'2026-10-15','2026-09-01','2027-06-30')",
+      [uid(91), ids.child, uid(90)],
+    );
+    await db.query(
+      "update public.fee_plans set name='Updated season',amount_cents=4000,archived=true where id=$1",
+      [uid(90)],
+    );
+    const charge = (
+      await db.query<{ amount_cents: number; period: string }>(
+        "select amount_cents,period_start::text as period from public.charges where id=$1",
+        [uid(91)],
+      )
+    ).rows[0];
+    expect(charge).toEqual({ amount_cents: 3500, period: "2026-09-01" });
+    expect(
+      (
+        await db.query(
+          "select id from public.audit_logs where table_name='fee_plans' and operation='UPDATE'",
+        )
+      ).rows,
+    ).toHaveLength(1);
+    await as(ids.parent);
+    expect(
+      (
+        await db.query("select period_start from public.charges where id=$1", [
+          uid(91),
+        ])
+      ).rows,
+    ).toHaveLength(1);
+    await as(ids.coach);
+    expect(await count("fee_plans")).toBe(0);
+    expect(
+      (await db.query("select id from public.charges where id=$1", [uid(91)]))
+        .rows,
+    ).toHaveLength(0);
+  });
+  it("rejects issuance against an archived plan", async () => {
+    await as(ids.admin);
+    await db.query(
+      "insert into public.fee_plans(id,name,amount_cents,archived) values($1,'Archived',3500,true)",
+      [uid(90)],
+    );
+    await expect(
+      db.query(
+        "insert into public.charges(player_id,plan_id,label,amount_cents,due_date) values($1,$2,'Season',3500,'2026-10-15')",
+        [ids.child, uid(90)],
+      ),
+    ).rejects.toThrow();
+  });
+  it("allows restored plans to be assigned again", async () => {
+    await as(ids.admin);
+    await db.query(
+      "insert into public.fee_plans(id,name,amount_cents,archived) values($1,'Restored',3500,true)",
+      [uid(90)],
+    );
+    await db.query("update public.fee_plans set archived=false where id=$1", [
+      uid(90),
+    ]);
+    await db.query(
+      "insert into public.charges(player_id,plan_id,label,amount_cents,due_date) values($1,$2,'Season',3500,'2026-10-15')",
+      [ids.child, uid(90)],
+    );
+  });
+  it.each([
+    [null, "2026-10-31"],
+    ["2026-10-01", null],
+    ["2026-11-01", "2026-10-31"],
+    ["2026-10-01", "infinity"],
+  ])("rejects invalid database period %s to %s", async (start, end) => {
+    await as(ids.admin);
+    await expect(
+      db.query(
+        "insert into public.charges(player_id,label,amount_cents,due_date,period_start,period_end) values($1,'Season',3500,'2026-10-15',$2,$3)",
+        [ids.child, start, end],
+      ),
+    ).rejects.toThrow();
+  });
+  it.each(["coach", "parent", "inactive"] as const)(
+    "denies plan mutation to %s",
+    async (role) => {
+      await as(ids.admin);
+      await db.query(
+        "insert into public.fee_plans(id,name,amount_cents) values($1,'Season',3500)",
+        [uid(90)],
+      );
+      await as(ids[role]);
+      expect(
+        (
+          await db.query(
+            "update public.fee_plans set archived=true where id=$1 returning id",
+            [uid(90)],
+          )
+        ).rows,
+      ).toHaveLength(0);
+      await expect(
+        db.query(
+          "insert into public.fee_plans(name,amount_cents) values('Unauthorized',3500)",
+        ),
+      ).rejects.toThrow();
+    },
+  );
   const reminderCount = async () =>
     Number(
       (

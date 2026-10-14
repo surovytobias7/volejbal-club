@@ -1,6 +1,8 @@
 "use server";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { feePeriodSchema } from "@/lib/fee-period";
+import { categoriesSchema } from "@/lib/club-settings";
 import { createClient } from "@supabase/supabase-js";
 import { requireViewer } from "@/lib/auth";
 import { appUrl, publicEnvironment } from "@/lib/env";
@@ -49,7 +51,7 @@ export async function mutate(_: FormState, form: FormData): Promise<FormState> {
         const parsed = z
           .object({
             name: text(100),
-            category: text(50),
+            category: z.string().trim().min(1).max(50),
             description: optionalText(2000),
           })
           .parse(data);
@@ -410,7 +412,30 @@ export async function mutate(_: FormState, form: FormData): Promise<FormState> {
         const p = z
           .object({ name: text(120), amount_cents: amount })
           .parse(data);
-        check(await db.from("fee_plans").insert(p));
+        if (data.id)
+          check(
+            await db
+              .from("fee_plans")
+              .update(p)
+              .eq("id", uuid.parse(data.id))
+              .select("id")
+              .single(),
+          );
+        else check(await db.from("fee_plans").insert(p));
+        break;
+      }
+      case "archive-fee-plan": {
+        admin();
+        const archived =
+          z.enum(["true", "false"]).parse(data.archived) === "true";
+        check(
+          await db
+            .from("fee_plans")
+            .update({ archived })
+            .eq("id", uuid.parse(data.id))
+            .select("id")
+            .single(),
+        );
         break;
       }
       case "charge": {
@@ -425,7 +450,11 @@ export async function mutate(_: FormState, form: FormData): Promise<FormState> {
           })
           .parse(data);
         check(
-          await db.from("charges").insert({ ...p, plan_id: p.plan_id || null }),
+          await db.from("charges").insert({
+            ...p,
+            ...feePeriodSchema.parse(data),
+            plan_id: p.plan_id || null,
+          }),
         );
         break;
       }
@@ -508,7 +537,7 @@ export async function mutate(_: FormState, form: FormData): Promise<FormState> {
               z.url().refine((v) => v.startsWith("https://")),
               z.literal(""),
             ]),
-            categories: z.string().max(500),
+            categories: categoriesSchema,
           })
           .parse(data);
         check(
@@ -517,10 +546,6 @@ export async function mutate(_: FormState, form: FormData): Promise<FormState> {
             .update({
               ...p,
               logo_url: p.logo_url || null,
-              categories: p.categories
-                .split(",")
-                .map((v) => v.trim())
-                .filter(Boolean),
             })
             .eq("id", true)
             .select("id")

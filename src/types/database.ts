@@ -256,6 +256,8 @@ export type Database = {
           amount_cents: number;
           due_date: string;
           created_at: string;
+          period_start: string | null;
+          period_end: string | null;
         };
         Insert: {
           id?: string;
@@ -265,6 +267,8 @@ export type Database = {
           amount_cents: number;
           due_date: string;
           created_at?: string;
+          period_start?: string | null;
+          period_end?: string | null;
         };
         Update: {
           id?: string;
@@ -274,6 +278,8 @@ export type Database = {
           amount_cents?: number;
           due_date?: string;
           created_at?: string;
+          period_start?: string | null;
+          period_end?: string | null;
         };
         Relationships: [
           {
@@ -830,6 +836,10 @@ export type Database = {
         Returns: Json;
       };
       finance_summary: { Args: { p_charge_id: string | null }; Returns: Json };
+      guardian_dashboard: {
+        Args: { p_at: string | null; p_after: string | null };
+        Returns: Json;
+      };
       member_page: {
         Args: {
           p_query: string | null;

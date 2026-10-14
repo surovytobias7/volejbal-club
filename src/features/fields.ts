@@ -25,11 +25,35 @@ export const memberFields: Field[] = [
     hint: "Pre hráčov: používa sa na určenie plnoletosti a prístupu k platbám.",
   },
 ];
-export const teamFields: Field[] = [
-  { name: "name", label: "Názov tímu" },
-  { name: "category", label: "Kategória" },
-  { name: "description", label: "Popis", type: "textarea", required: false },
-];
+export function teamFields(
+  categories: string[],
+  team?: Record<string, string>,
+): Field[] {
+  const choices = [
+    ...new Set([...categories, ...(team?.category ? [team.category] : [])]),
+  ];
+  return [
+    { name: "name", label: "Názov tímu", value: team?.name },
+    {
+      name: "category",
+      label: "Kategória",
+      value: team?.category,
+      options: choices.length
+        ? choices.map((value) => ({ value, label: value }))
+        : undefined,
+      hint: choices.length
+        ? "Kategórie spravujete v nastaveniach klubu. Pôvodná kategória tímu zostáva dostupná."
+        : "Klub zatiaľ nemá kategórie. Zadajte vlastnú alebo ich nastavte v nastaveniach klubu.",
+    },
+    {
+      name: "description",
+      label: "Popis",
+      type: "textarea",
+      required: false,
+      value: team?.description,
+    },
+  ];
+}
 export function eventFields(event?: Record<string, string | null>): Field[] {
   return [
     { name: "title", label: "Názov udalosti" },

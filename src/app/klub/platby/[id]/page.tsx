@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { feePeriodLabel } from "@/lib/fee-period";
 import { z } from "zod";
 import { notFound } from "next/navigation";
 import { requireViewer } from "@/lib/auth";
@@ -143,6 +144,12 @@ export default async function Charge({
             <div className="metric-line">
               <span>Zostáva uhradiť</span>
               <strong>{money(remaining)}</strong>
+            </div>
+            <div className="metric-line">
+              <span>Obdobie</span>
+              <strong>
+                {feePeriodLabel(charge.period_start, charge.period_end)}
+              </strong>
             </div>
             <div className="metric-line">
               <span>Splatnosť</span>

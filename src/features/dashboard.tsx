@@ -16,9 +16,12 @@ import {
 } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import { money, dateTime } from "@/lib/utils";
+import type { GuardianChild } from "@/lib/guardian-dashboard";
+import type { Role } from "@/lib/auth";
+import { Pagination } from "@/components/pagination";
 export type DashboardData = {
   name: string;
-  roles: string[];
+  roles: Role[];
   teamCount: number;
   playerCount: number;
   eventCount: number;
@@ -37,7 +40,9 @@ export type DashboardData = {
     important: boolean;
     created_at: string;
   }[];
-  children?: { id: string; full_name: string }[];
+  children?: GuardianChild[];
+  childContinued?: boolean;
+  childNextHref?: string;
 };
 export function Dashboard({
   data,
@@ -66,11 +71,12 @@ export function Dashboard({
           : coach
             ? "Hráči vašich tímov"
             : "Vaše tímy",
-      value:
-        admin || coach
-          ? data.playerCount
-          : guardian
-            ? (data.childCount ?? data.children?.length ?? 0)
+      value: admin
+        ? data.playerCount
+        : guardian
+          ? (data.childCount ?? data.children?.length ?? 0)
+          : coach
+            ? data.playerCount
             : data.teamCount,
       hint: admin ? "V klubovej evidencii" : "Vo vašom klubovom priestore",
       icon: Users,
@@ -116,25 +122,6 @@ export function Dashboard({
           </Button>
         }
       />
-      {data.children && data.children.length > 0 && (
-        <div className="notice">
-          Vaše deti:{" "}
-          {data.children.map((c, i) => (
-            <span key={c.id}>
-              {i > 0 ? ", " : ""}
-              <Link href={`/klub/kalendar?child=${c.id}`}>{c.full_name}</Link>
-              {" · "}
-              <Link href={`/klub/clenovia/${c.id}`}>Profil</Link>
-            </span>
-          ))}
-          {(data.childCount ?? 0) > data.children.length && (
-            <Link className="text-link" href="/klub/clenovia">
-              {" "}
-              Všetci prepojení členovia
-            </Link>
-          )}
-        </div>
-      )}
       {!!data.pendingCount && (
         <div className="notice">
           <strong>{data.pendingCount} odpovedí na účasť ešte chýba.</strong>{" "}
@@ -157,6 +144,96 @@ export function Dashboard({
       </div>
       <div className="dashboard-grid">
         <div className="stack">
+          {(guardian || !!data.children?.length) && (
+            <div id="deti">
+              <Panel title="Vaše deti">
+                {data.children?.length ? (
+                  data.children.map((child) => (
+                    <article className="announcement-item" key={child.id}>
+                      <div className="metric-line">
+                        <h3>{child.full_name}</h3>
+                        <Link
+                          className="text-link"
+                          href={
+                            preview
+                              ? "/ukazka?view=rodic"
+                              : `/klub/clenovia/${child.id}`
+                          }
+                        >
+                          Profil
+                        </Link>
+                      </div>
+                      {child.next_event ? (
+                        <>
+                          <Link
+                            className="text-link"
+                            href={
+                              preview
+                                ? "/ukazka?view=kalendar"
+                                : `/klub/kalendar/${child.next_event.id}`
+                            }
+                          >
+                            {child.next_event.title} <ArrowUpRight size={16} />
+                          </Link>
+                          <p>
+                            {dateTime(child.next_event.starts_at)} ·{" "}
+                            {child.next_event.venue}
+                          </p>
+                          <span
+                            className={`badge ${child.next_event.response === "yes" ? "success" : child.next_event.response === "no" ? "danger" : "match"}`}
+                          >
+                            {
+                              {
+                                yes: "Účasť potvrdená",
+                                no: "Nezúčastní sa",
+                                maybe: "Účasť neistá",
+                                pending: "Čaká na vašu odpoveď",
+                              }[child.next_event.response ?? "pending"]
+                            }
+                          </span>
+                        </>
+                      ) : (
+                        <p className="muted">Žiadna najbližšia udalosť.</p>
+                      )}
+                      <div className="metric-line mt-4">
+                        <span>Skutočná účasť</span>
+                        <strong>
+                          {child.attendance.recorded
+                            ? `${child.attendance.present} / ${child.attendance.recorded}`
+                            : "Zatiaľ bez záznamu"}
+                        </strong>
+                      </div>
+                      <div className="metric-line">
+                        <span>Zostáva uhradiť</span>
+                        <strong>{money(child.remaining)}</strong>
+                      </div>
+                      <Link
+                        className="text-link mt-3"
+                        href={
+                          preview
+                            ? "/ukazka?view=kalendar"
+                            : `/klub/kalendar?child=${child.id}`
+                        }
+                      >
+                        Kalendár dieťaťa <ArrowUpRight size={16} />
+                      </Link>
+                    </article>
+                  ))
+                ) : (
+                  <Empty
+                    title="Žiadne dostupné deti"
+                    description="Správca klubu vám priradí deti. Pri zmene prepojenia sa ich dostupnosť aktualizuje."
+                  />
+                )}
+                <Pagination
+                  firstHref={preview ? "/ukazka?view=rodic" : "/klub#deti"}
+                  continued={!!data.childContinued}
+                  count={data.children?.length ?? 0}
+                  nextHref={data.childNextHref}
+                />
+              </Panel>
+            </div>
+          )}
           <Panel
             title="Najbližšie na ihrisku"
             href={preview ? "/ukazka?view=kalendar" : "/klub/kalendar"}
@@ -197,7 +274,10 @@ export function Dashboard({
         </div>
         <div className="stack">
           {data.balance !== null && (
-            <Panel title="Zaznamenaná účasť" href="/klub/dochadzka">
+            <Panel
+              title="Zaznamenaná účasť"
+              href={preview ? "/ukazka?view=dochadzka" : "/klub/dochadzka"}
+            >
               <div className="panel-body">
                 <div className="metric-line">
                   <span>Skutočná účasť v dostupnej histórii</span>

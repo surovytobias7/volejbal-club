@@ -1,4 +1,7 @@
 import { z } from "zod";
+import Link from "next/link";
+import { Pagination } from "@/components/pagination";
+import { historyPage } from "@/lib/history";
 import { notFound } from "next/navigation";
 import { requireViewer, roleNames, type Role } from "@/lib/auth";
 import { MemberProfile } from "@/features/member-profile";
@@ -9,8 +12,10 @@ import { mutate } from "@/features/actions";
 import { memberFields, roleOptions, formValues } from "@/features/fields";
 export default async function Member({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ childAfter?: string }>;
 }) {
   const { id } = await params;
   if (!z.uuid().safeParse(id).success) notFound();
@@ -24,16 +29,17 @@ export default async function Member({
     await v.db.from("user_roles").select("role").eq("profile_id", id),
   );
   const isGuardian = roles.some((r) => r.role === "guardian");
-  const children = isGuardian
-    ? rows(
-        await v.db
-          .from("guardian_players")
-          .select(
-            "player_id,profiles!guardian_players_player_id_fkey(full_name)",
-          )
-          .eq("guardian_id", id),
-      )
-    : [];
+  const childAfter = z.uuid().safeParse((await searchParams).childAfter).data;
+  let childRequest = v.db
+    .from("guardian_players")
+    .select("player_id,profiles!guardian_players_player_id_fkey(full_name)")
+    .eq("guardian_id", id)
+    .order("player_id")
+    .limit(26);
+  if (childAfter) childRequest = childRequest.gt("player_id", childAfter);
+  const childPage = historyPage(isGuardian ? rows(await childRequest) : []);
+  const children = childPage.items;
+  const lastChild = children.at(-1);
   return (
     <>
       <PageHeading
@@ -58,44 +64,64 @@ export default async function Member({
             </div>
           </Panel>
           {isGuardian && (
-            <Panel title="Prepojené deti">
-              <div className="panel-body">
-                {children.map((c) => (
-                  <div className="metric-line" key={c.player_id}>
-                    <span>
+            <div id="deti">
+              <Panel title="Prepojené deti">
+                <div className="panel-body">
+                  {!children.length && (
+                    <p className="muted">
+                      Na tejto stránke nie sú žiadne prepojené deti.
+                    </p>
+                  )}
+                  {children.map((c) => (
+                    <div className="metric-line" key={c.player_id}>
+                      <Link
+                        className="text-link"
+                        href={`/klub/clenovia/${c.player_id}`}
+                      >
+                        {
+                          (c.profiles as unknown as { full_name: string })
+                            ?.full_name
+                        }
+                      </Link>
+                      <ActionForm
+                        action={mutate}
+                        hidden={{
+                          command: "guardian",
+                          guardian_id: id,
+                          player_id: c.player_id,
+                          remove: "true",
+                        }}
+                        fields={[]}
+                        submit="Zrušiť prepojenie"
+                        danger
+                      />
+                    </div>
+                  ))}
+                  <ActionForm
+                    action={mutate}
+                    hidden={{ command: "guardian", guardian_id: id }}
+                    fields={[
                       {
-                        (c.profiles as unknown as { full_name: string })
-                          ?.full_name
-                      }
-                    </span>
-                    <ActionForm
-                      action={mutate}
-                      hidden={{
-                        command: "guardian",
-                        guardian_id: id,
-                        player_id: c.player_id,
-                        remove: "true",
-                      }}
-                      fields={[]}
-                      submit="Zrušiť prepojenie"
-                      danger
-                    />
-                  </div>
-                ))}
-                <ActionForm
-                  action={mutate}
-                  hidden={{ command: "guardian", guardian_id: id }}
-                  fields={[
-                    {
-                      name: "player_id",
-                      label: "Hráč",
-                      source: "players",
-                    },
-                  ]}
-                  submit="Prepojiť dieťa"
+                        name: "player_id",
+                        label: "Hráč",
+                        source: "players",
+                      },
+                    ]}
+                    submit="Prepojiť dieťa"
+                  />
+                </div>
+                <Pagination
+                  firstHref={`/klub/clenovia/${id}#deti`}
+                  continued={!!childAfter}
+                  count={children.length}
+                  nextHref={
+                    childPage.hasMore && lastChild
+                      ? `/klub/clenovia/${id}?childAfter=${lastChild.player_id}#deti`
+                      : undefined
+                  }
                 />
-              </div>
-            </Panel>
+              </Panel>
+            </div>
           )}
         </div>
         <div className="stack">

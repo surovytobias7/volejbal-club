@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireViewer } from "@/lib/auth";
-import { rows, one } from "@/lib/data";
+import { one } from "@/lib/data";
 import {
   chargePageSchema,
   financeSummarySchema,
@@ -33,9 +33,6 @@ export default async function Payments({
   const page = chargePageSchema.parse(one(pageResult));
   const records = page.items;
   const last = records.at(-1);
-  const plans = admin
-    ? rows(await v.db.from("fee_plans").select("*").eq("archived", false))
-    : [];
   const today = dateTime(new Date().toISOString(), "yyyy-MM-dd");
   return (
     <>
@@ -65,7 +62,7 @@ export default async function Payments({
                   },
                   {
                     name: "label",
-                    label: "Názov a obdobie",
+                    label: "Názov poplatku",
                     hint: "Napríklad Členské – október 2026",
                   },
                   {
@@ -73,6 +70,8 @@ export default async function Payments({
                     label: "Suma v EUR",
                     hint: "Napríklad 35,00",
                   },
+                  { name: "period_start", label: "Obdobie od", type: "date" },
+                  { name: "period_end", label: "Obdobie do", type: "date" },
                   { name: "due_date", label: "Dátum splatnosti", type: "date" },
                 ]}
                 submit="Priradiť poplatok"
@@ -171,30 +170,9 @@ export default async function Payments({
       </Panel>
       {admin && (
         <div className="mt-6">
-          <Panel title="Poplatkové plány">
-            <div className="panel-body">
-              {plans.map((p) => (
-                <div className="metric-line" key={p.id}>
-                  <span>{p.name}</span>
-                  <strong>{money(p.amount_cents)}</strong>
-                </div>
-              ))}
-              <FormDialog
-                title="Nový poplatkový plán"
-                description="Uložte názov a odporúčanú sumu opakovaného poplatku."
-              >
-                <ActionForm
-                  action={mutate}
-                  hidden={{ command: "fee-plan" }}
-                  fields={[
-                    { name: "name", label: "Názov plánu" },
-                    { name: "amount_cents", label: "Suma v EUR" },
-                  ]}
-                  submit="Vytvoriť plán"
-                />
-              </FormDialog>
-            </div>
-          </Panel>
+          <Link className="text-link" href="/klub/platby/plany">
+            Spravovať poplatkové plány →
+          </Link>
         </div>
       )}
     </>

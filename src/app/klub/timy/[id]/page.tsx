@@ -28,6 +28,10 @@ export default async function Team({
   if (!z.uuid().safeParse(id).success) notFound();
   const v = await requireViewer();
   const admin = v.roles.includes("admin");
+  const categories = admin
+    ? one(await v.db.from("club_settings").select("categories").single())
+        .categories
+    : [];
   const team = one(await v.db.from("teams").select("*").eq("id", id).single());
   const search = await searchParams;
   const q = directoryQuery(search);
@@ -72,10 +76,7 @@ export default async function Team({
               <ActionForm
                 action={mutate}
                 hidden={{ command: "team", id }}
-                fields={teamFields.map((f) => ({
-                  ...f,
-                  value: formValues(team)[f.name],
-                }))}
+                fields={teamFields(categories, formValues(team))}
               />
             </FormDialog>
           )

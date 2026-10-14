@@ -24,6 +24,10 @@ export default async function Teams({
   const archived = params.archived === "true";
   const cursor = directoryCursor(params);
   const admin = v.roles.includes("admin");
+  const categories = admin
+    ? one(await v.db.from("club_settings").select("categories").single())
+        .categories
+    : [];
   const page = teamPageSchema.parse(
     one(
       await v.db.rpc("team_page", {
@@ -50,7 +54,7 @@ export default async function Teams({
               <ActionForm
                 action={mutate}
                 hidden={{ command: "team" }}
-                fields={teamFields}
+                fields={teamFields(categories)}
                 submit="Vytvoriť tím"
               />
             </FormDialog>

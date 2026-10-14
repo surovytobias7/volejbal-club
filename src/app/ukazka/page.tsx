@@ -72,12 +72,42 @@ export default async function Preview({
       },
     ],
   };
+  if (view === "rodic") {
+    fixture.name = "Lucia Ukážková";
+    fixture.roles = ["guardian"];
+    fixture.childCount = 2;
+    fixture.children = [
+      {
+        id: "child-a",
+        full_name: "Nina Ukážková",
+        next_event: {
+          id: "a",
+          title: "Tréning kadetiek",
+          starts_at: localToUtc(`${day}T16:00`),
+          venue: "Športová hala, ihrisko A",
+          response: null,
+        },
+        attendance: { recorded: 12, present: 10 },
+        remaining: 1500,
+      },
+      {
+        id: "child-b",
+        full_name: "Adam Ukážkový",
+        next_event: null,
+        attendance: { recorded: 0, present: 0 },
+        remaining: 0,
+      },
+    ];
+    fixture.balance = 1500;
+  }
   return (
-    <Shell name={fixture.name} club="Volej klub" roles={["admin"]} preview>
+    <Shell name={fixture.name} club="Volej klub" roles={fixture.roles} preview>
       <div className="notice">
         <strong>Ukážka rozhrania s fiktívnymi údajmi.</strong> Nie ste
         prihlásení. Zmeny sa neukladajú.{" "}
         <Link href="/nastavenie">Nastavenie aplikácie</Link>
+        {" · "}
+        <Link href="/ukazka?view=rodic">Ukážka rodičovského prehľadu</Link>
       </div>
       {view === "kalendar" || view === "dochadzka" ? (
         <>
@@ -127,7 +157,7 @@ export default async function Preview({
             ))}
           </Panel>
         </>
-      ) : view && !["klub"].includes(view) ? (
+      ) : view && !["klub", "rodic"].includes(view) ? (
         <>
           <PageHeading
             title="Ukážka klubového priestoru"
