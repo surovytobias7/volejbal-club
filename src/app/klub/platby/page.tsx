@@ -1,3 +1,4 @@
+import { ChargeTable, FinanceSummary } from "@/components/records";
 import Link from "next/link";
 import { requireViewer } from "@/lib/auth";
 import { one } from "@/lib/data";
@@ -13,7 +14,7 @@ import { PageHeading, Panel, Empty } from "@/components/shared";
 import { ActionForm } from "@/components/forms";
 import { FormDialog } from "@/components/ui/dialog";
 import { mutate } from "@/features/actions";
-import { money, dateTime } from "@/lib/utils";
+import { dateTime } from "@/lib/utils";
 export default async function Payments({
   searchParams,
 }: {
@@ -80,93 +81,10 @@ export default async function Payments({
           )
         }
       />
-      <div className="dashboard-stats finance-summary">
-        <div className="stat">
-          <span className="muted">Predpísané členské</span>
-          <strong>{money(summary.charged)}</strong>
-          <small>Všetky dostupné poplatky</small>
-        </div>
-        <div className="stat">
-          <span className="muted">Uhradené</span>
-          <strong>{money(summary.paid)}</strong>
-          <small>Podľa záznamov klubu</small>
-        </div>
-        <div className="stat">
-          <span className="muted">Zostáva uhradiť</span>
-          <strong>{money(summary.remaining)}</strong>
-          <small>Vrátane čiastočných úhrad</small>
-        </div>
-        <div className="stat">
-          <span className="muted">Po splatnosti</span>
-          <strong>{money(summary.overdue)}</strong>
-          <small>Neuhradené k dnešnému dňu</small>
-        </div>
-      </div>
+      <FinanceSummary summary={summary} />
       <Panel title="Členské poplatky">
         {records.length ? (
-          <div className="data-table-wrap">
-            <table className="data-table responsive-table" role="table">
-              <thead role="rowgroup">
-                <tr role="row">
-                  <th scope="col" role="columnheader">
-                    Hráč a poplatok
-                  </th>
-                  <th scope="col" role="columnheader">
-                    Splatnosť
-                  </th>
-                  <th scope="col" role="columnheader">
-                    Suma
-                  </th>
-                  <th scope="col" role="columnheader">
-                    Zostáva
-                  </th>
-                  <th scope="col" role="columnheader">
-                    Stav
-                  </th>
-                  <th scope="col" role="columnheader">
-                    História
-                  </th>
-                </tr>
-              </thead>
-              <tbody role="rowgroup">
-                {records.map((c) => (
-                  <tr role="row" key={c.id}>
-                    <td role="cell" data-label="Hráč a poplatok">
-                      <strong>{c.full_name}</strong>
-                      <small>{c.label}</small>
-                    </td>
-                    <td role="cell" data-label="Splatnosť">
-                      {c.due_date.split("-").reverse().join(". ")}
-                    </td>
-                    <td role="cell" data-label="Suma">
-                      {money(c.amount_cents)}
-                    </td>
-                    <td role="cell" data-label="Zostáva">
-                      <strong>{money(c.remaining)}</strong>
-                    </td>
-                    <td role="cell" data-label="Stav">
-                      <span
-                        className={`badge ${c.remaining === 0 ? "success" : c.due_date < today ? "danger" : "match"}`}
-                      >
-                        {c.remaining === 0
-                          ? "Uhradené"
-                          : c.due_date < today
-                            ? "Po splatnosti"
-                            : c.remaining < c.amount_cents
-                              ? "Čiastočne uhradené"
-                              : "Čaká na úhradu"}
-                      </span>
-                    </td>
-                    <td role="cell" data-label="História">
-                      <Link className="text-link" href={`/klub/platby/${c.id}`}>
-                        Detail
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ChargeTable records={records} today={today} />
         ) : (
           <Empty
             title="Žiadne dostupné poplatky"

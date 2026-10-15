@@ -1,12 +1,5 @@
 import Link from "next/link";
-import {
-  Users,
-  Volleyball,
-  CalendarDays,
-  CreditCard,
-  ArrowUpRight,
-  Activity,
-} from "lucide-react";
+import { Users, CalendarDays, ArrowUpRight } from "lucide-react";
 import { Panel, EventList, Empty, type EventRow } from "@/components/shared";
 import { money, dateTime } from "@/lib/utils";
 import type { GuardianChild } from "@/lib/guardian-dashboard";
@@ -75,19 +68,16 @@ export function Dashboard({
             ? data.playerCount
             : data.teamCount,
       hint: admin ? "V klubovej evidencii" : "Vo vašom klubovom priestore",
-      icon: Users,
     },
     {
       label: "Tímy",
       value: data.teamCount,
       hint: admin ? "Aktívne v klube" : "Tímy, ku ktorým máte prístup",
-      icon: Volleyball,
     },
     {
       label: "Najbližšie udalosti",
       value: data.eventCount,
       hint: "Naplánované od dnešného dňa",
-      icon: CalendarDays,
     },
     {
       label: data.balance !== null ? "Zostáva uhradiť" : "Zaznamenaná účasť",
@@ -101,7 +91,6 @@ export function Dashboard({
         data.balance !== null
           ? "Podľa evidovaných platieb"
           : "Z vyhodnotených tréningov",
-      icon: data.balance !== null ? CreditCard : Activity,
     },
   ];
   return (
@@ -119,24 +108,22 @@ export function Dashboard({
             className="next-session"
             href={preview ? calendarHref : `/klub/kalendar/${nextEvent.id}`}
           >
-            <div className="next-session-label">
-              <span>Najbližšie na ihrisku</span>
-              <ArrowUpRight size={19} aria-hidden />
-            </div>
             <div className="next-session-time">
               <strong>{dateTime(nextEvent.starts_at, "HH:mm")}</strong>
               <span>{dateTime(nextEvent.starts_at, "EEEE, d. MMMM")}</span>
             </div>
-            <h2>{nextEvent.title}</h2>
-            <p>
-              {data.teams[nextEvent.team_id]}
-              <br />
-              {nextEvent.venue}
-            </p>
+            <div className="next-session-detail">
+              <h2>{nextEvent.title}</h2>
+              <p>
+                {data.teams[nextEvent.team_id]} · {nextEvent.venue}
+              </p>
+              <span className="next-session-caption">
+                Najbližšie na ihrisku <ArrowUpRight size={16} aria-hidden />
+              </span>
+            </div>
           </Link>
         ) : (
-          <div className="next-session">
-            <CalendarDays size={26} aria-hidden />
+          <div className="next-session next-session-empty">
             <h2>Priestor na ďalší tréning</h2>
             <p>
               Keď pribudne nová udalosť, jej čas a miesto nájdete priamo tu.
@@ -162,9 +149,6 @@ export function Dashboard({
             <section className="stat" key={s.label}>
               <div className="stat-top">
                 <span>{s.label}</span>
-                <span className="stat-icon">
-                  <s.icon size={17} aria-hidden />
-                </span>
               </div>
               <strong>{s.value}</strong>
               <small>{s.hint}</small>
@@ -175,7 +159,7 @@ export function Dashboard({
         <div className="stack">
           {(guardian || !!data.children?.length) && (
             <div id="deti">
-              <Panel title="Vaše deti">
+              <Panel title="Vaše deti" plain>
                 {data.children?.length ? (
                   data.children.map((child) => (
                     <article
@@ -267,6 +251,7 @@ export function Dashboard({
             </div>
           )}
           <Panel
+            plain
             title="Najbližšie na ihrisku"
             href={preview ? "/ukazka?view=kalendar" : "/klub/kalendar"}
             label="Celý kalendár"
@@ -278,6 +263,7 @@ export function Dashboard({
             />
           </Panel>
           <Panel
+            plain
             title="Vaše tímy"
             href={preview ? "/ukazka?view=timy" : "/klub/timy"}
           >
@@ -307,6 +293,7 @@ export function Dashboard({
         <div className="stack">
           {data.balance !== null && (
             <Panel
+              plain
               title="Zaznamenaná účasť"
               href={preview ? "/ukazka?view=dochadzka" : "/klub/dochadzka"}
             >
@@ -323,7 +310,7 @@ export function Dashboard({
             </Panel>
           )}
           {admin && !!data.recentActivity?.length && (
-            <Panel title="Posledné zmeny" href="/klub/audit">
+            <Panel title="Posledné zmeny" href="/klub/audit" plain>
               <div className="panel-body">
                 {data.recentActivity.map((a) => (
                   <div className="metric-line" key={a.id}>
@@ -375,6 +362,7 @@ export function Dashboard({
             </div>
           )}
           <Panel
+            plain
             title="Klubová nástenka"
             href={preview ? "/ukazka?view=oznamy" : "/klub/oznamy"}
             label="Všetky oznamy"

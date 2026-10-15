@@ -37,9 +37,12 @@ export function CalendarView({
             </time>
             {day === today && <span className="badge training">Dnes</span>}
           </h2>
-          <div className="panel">
-            <EventList events={entries} teams={teams} preview={preview} />
-          </div>
+          <EventList
+            events={entries}
+            teams={teams}
+            preview={preview}
+            showDate={false}
+          />
         </section>
       ))}
     </div>

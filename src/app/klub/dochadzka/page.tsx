@@ -1,10 +1,10 @@
-﻿import Link from "next/link";
+import { AttendanceTable } from "@/components/records";
+import Link from "next/link";
 import { z } from "zod";
 import { requireViewer } from "@/lib/auth";
 import { one } from "@/lib/data";
 import { PageHeading, Panel, Empty } from "@/components/shared";
 import { Pagination } from "@/components/pagination";
-import { dateTime } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   attendancePageSchema,
@@ -106,63 +106,7 @@ export default async function Attendance({
       </div>
       <Panel title="História účasti">
         {page.items.length ? (
-          <div className="data-table-wrap">
-            <table className="data-table responsive-table" role="table">
-              <thead role="rowgroup">
-                <tr role="row">
-                  <th scope="col" role="columnheader">
-                    Hráč
-                  </th>
-                  <th scope="col" role="columnheader">
-                    Udalosť
-                  </th>
-                  <th scope="col" role="columnheader">
-                    Dátum
-                  </th>
-                  <th scope="col" role="columnheader">
-                    Účasť
-                  </th>
-                </tr>
-              </thead>
-              <tbody role="rowgroup">
-                {page.items.map((r) => (
-                  <tr role="row" key={`${r.event_id}-${r.player_id}`}>
-                    <td role="cell" data-label="Hráč">
-                      {r.full_name ?? "Hráč"}
-                    </td>
-                    <td role="cell" data-label="Udalosť">
-                      {r.title ? (
-                        <Link
-                          className="text-link"
-                          href={`/klub/kalendar/${r.event_id}`}
-                        >
-                          {r.title}
-                        </Link>
-                      ) : (
-                        "Historická udalosť"
-                      )}
-                    </td>
-                    <td role="cell" data-label="Dátum">
-                      {r.starts_at ? dateTime(r.starts_at, "d. M. yyyy") : "—"}
-                    </td>
-                    <td role="cell" data-label="Účasť">
-                      <span
-                        className={`badge ${r.status === "present" ? "success" : r.status === "absent" ? "danger" : ""}`}
-                      >
-                        {
-                          {
-                            present: "Prítomný",
-                            absent: "Neprítomný",
-                            excused: "Ospravedlnený",
-                          }[r.status]
-                        }
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <AttendanceTable records={page.items} />
         ) : (
           <Empty
             title="Žiadne záznamy podľa filtrov"

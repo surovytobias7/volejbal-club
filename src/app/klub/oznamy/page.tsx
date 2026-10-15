@@ -127,7 +127,7 @@ export default async function Announcements({
       {page.items.length ? (
         <div className="stack announcement-feed">
           {page.items.map((a) => (
-            <Panel key={a.id} title={a.title}>
+            <Panel key={a.id} title={a.title} plain>
               <div className="panel-body">
                 <div className="event-meta">
                   <span className="badge">
