@@ -33,12 +33,14 @@ export function ActionForm({
   hidden = {},
   submit = "Uložiť",
   danger = false,
+  variant = "default",
 }: {
   action: FormAction;
   fields: Field[];
   hidden?: Record<string, string>;
   submit?: string;
   danger?: boolean;
+  variant?: "default" | "secondary" | "ghost";
 }) {
   const [state, formAction, pending] = useActionState(action, {});
   const formId = useId();
@@ -46,11 +48,19 @@ export function ActionForm({
     Record<string, boolean>
   >({});
   const errorRef = useRef<HTMLParagraphElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
   useEffect(() => {
-    if (state.error) errorRef.current?.focus();
+    if (state.error || state.fieldErrors) {
+      const invalid = formRef.current?.querySelector<HTMLElement>(
+        '[aria-invalid="true"]',
+      );
+      if (invalid) invalid.focus();
+      else errorRef.current?.focus();
+    }
   }, [state]);
   return (
     <form
+      ref={formRef}
       action={formAction}
       className="action-form"
       aria-busy={pending}
@@ -218,7 +228,7 @@ export function ActionForm({
       <Button
         type="submit"
         disabled={pending}
-        variant={danger ? "danger" : "default"}
+        variant={danger ? "danger" : variant}
       >
         {pending && (
           <LoaderCircle className="pending-icon" size={16} aria-hidden />

@@ -90,18 +90,26 @@ export default async function Team({
           <Panel title="Členovia tímu">
             {memberships.length ? (
               <div className="data-table-wrap">
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>Meno</th>
-                      <th>Úloha</th>
-                      {admin && <th>Správa</th>}
+                <table className="data-table responsive-table" role="table">
+                  <thead role="rowgroup">
+                    <tr role="row">
+                      <th scope="col" role="columnheader">
+                        Meno
+                      </th>
+                      <th scope="col" role="columnheader">
+                        Úloha
+                      </th>
+                      {admin && (
+                        <th scope="col" role="columnheader">
+                          Správa
+                        </th>
+                      )}
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody role="rowgroup">
                     {memberships.map((m) => (
-                      <tr key={`${m.profile_id}-${m.kind}`}>
-                        <td>
+                      <tr role="row" key={`${m.profile_id}-${m.kind}`}>
+                        <td role="cell" data-label="Meno">
                           <Link
                             className="text-link"
                             href={`/klub/clenovia/${m.profile_id}`}
@@ -109,13 +117,13 @@ export default async function Team({
                             {m.full_name}
                           </Link>
                         </td>
-                        <td>
+                        <td role="cell" data-label="Úloha">
                           <span className="badge">
                             {m.kind === "coach" ? "Tréner" : "Hráč"}
                           </span>
                         </td>
                         {admin && (
-                          <td>
+                          <td role="cell" data-label="Správa">
                             <ActionForm
                               action={mutate}
                               hidden={{

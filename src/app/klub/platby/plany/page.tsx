@@ -54,7 +54,7 @@ export default async function FeePlans({
           </FormDialog>
         }
       />
-      <nav aria-label="Stav poplatkových plánov" className="flex gap-4 mb-6">
+      <nav aria-label="Stav poplatkových plánov" className="tabs mb-6">
         <Link
           className="text-link"
           aria-current={!archived ? "page" : undefined}
@@ -82,6 +82,7 @@ export default async function FeePlans({
                 <FormDialog
                   title="Upraviť poplatkový plán"
                   label="Upraviť"
+                  variant="secondary"
                   description="Nové údaje platia pre plán. Existujúce predpisy a úhrady zostanú zachované."
                 >
                   <ActionForm
@@ -99,6 +100,7 @@ export default async function FeePlans({
                 </FormDialog>
                 <FormDialog
                   title={archived ? "Obnoviť plán" : "Archivovať plán"}
+                  variant="secondary"
                   description={
                     archived
                       ? "Plán sa znovu sprístupní pri priraďovaní poplatkov."

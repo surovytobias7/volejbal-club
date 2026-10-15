@@ -81,19 +81,27 @@ export default async function Members({
       <Panel title={`Členovia (${page.total})`}>
         {members.length ? (
           <div className="data-table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Meno</th>
-                  <th>Roly</th>
-                  <th>Stav</th>
-                  <th>Profil</th>
+            <table className="data-table responsive-table" role="table">
+              <thead role="rowgroup">
+                <tr role="row">
+                  <th scope="col" role="columnheader">
+                    Meno
+                  </th>
+                  <th scope="col" role="columnheader">
+                    Roly
+                  </th>
+                  <th scope="col" role="columnheader">
+                    Stav
+                  </th>
+                  <th scope="col" role="columnheader">
+                    Profil
+                  </th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody role="rowgroup">
                 {members.map((p) => (
-                  <tr key={p.id}>
-                    <td>
+                  <tr role="row" key={p.id}>
+                    <td role="cell" data-label="Meno">
                       <div className="member-identity">
                         <span className="avatar" aria-hidden>
                           {p.full_name
@@ -112,15 +120,17 @@ export default async function Members({
                         </div>
                       </div>
                     </td>
-                    <td>{p.roles.map((r) => roleNames[r]).join(", ")}</td>
-                    <td>
+                    <td role="cell" data-label="Roly">
+                      {p.roles.map((r) => roleNames[r]).join(", ")}
+                    </td>
+                    <td role="cell" data-label="Stav">
                       <span
                         className={`badge ${p.active ? "success" : "danger"}`}
                       >
                         {p.active ? "Aktívny" : "Neaktívny"}
                       </span>
                     </td>
-                    <td>
+                    <td role="cell" data-label="Profil">
                       <Link
                         className="text-link"
                         href={`/klub/clenovia/${p.id}`}

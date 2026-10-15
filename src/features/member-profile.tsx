@@ -47,11 +47,23 @@ export async function MemberProfile({ id }: { id: string }) {
             </div>
             <div className="metric-line">
               <span>E-mail</span>
-              <span>{details.data?.email || "Neuvedený"}</span>
+              {details.data?.email ? (
+                <a className="text-link" href={`mailto:${details.data.email}`}>
+                  {details.data.email}
+                </a>
+              ) : (
+                <span>Neuvedený</span>
+              )}
             </div>
             <div className="metric-line">
               <span>Telefón</span>
-              <span>{details.data?.phone || "Neuvedený"}</span>
+              {details.data?.phone ? (
+                <a className="text-link" href={`tel:${details.data.phone}`}>
+                  {details.data.phone}
+                </a>
+              ) : (
+                <span>Neuvedený</span>
+              )}
             </div>
             <p className="muted mt-4">
               Opravu členských údajov zabezpečuje správca klubu.

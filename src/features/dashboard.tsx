@@ -48,6 +48,7 @@ export function Dashboard({
   const admin = roles.includes("admin");
   const coach = roles.includes("coach");
   const guardian = roles.includes("guardian");
+  const personal = !admin && !coach;
   const nextEvent = data.events.find((event) => event.status === "scheduled");
   const calendarHref = preview ? "/ukazka?view=kalendar" : "/klub/kalendar";
   const description = admin
@@ -105,7 +106,7 @@ export function Dashboard({
   ];
   return (
     <>
-      <div className="dashboard-hero">
+      <div className={`dashboard-hero ${personal ? "dashboard-personal" : ""}`}>
         <div className="dashboard-welcome">
           <h1>{`Dobrý deň, ${data.name.split(" ")[0]}`}</h1>
           <p>{description}</p>
@@ -154,19 +155,21 @@ export function Dashboard({
           </Link>
         </div>
       )}
-      <div className="dashboard-stats">
-        {stats.map((s) => (
-          <section className="stat" key={s.label}>
-            <div className="stat-top">
-              <span>{s.label}</span>
-              <span className="stat-icon">
-                <s.icon size={17} aria-hidden />
-              </span>
-            </div>
-            <strong>{s.value}</strong>
-            <small>{s.hint}</small>
-          </section>
-        ))}
+      <div className={`dashboard-stats ${personal ? "personal-stats" : ""}`}>
+        {stats
+          .filter((_, index) => !personal || index !== (guardian ? 1 : 0))
+          .map((s) => (
+            <section className="stat" key={s.label}>
+              <div className="stat-top">
+                <span>{s.label}</span>
+                <span className="stat-icon">
+                  <s.icon size={17} aria-hidden />
+                </span>
+              </div>
+              <strong>{s.value}</strong>
+              <small>{s.hint}</small>
+            </section>
+          ))}
       </div>
       <div className="dashboard-grid">
         <div className="stack">
@@ -331,44 +334,46 @@ export function Dashboard({
               </div>
             </Panel>
           )}
-          <div className="feature-card">
-            <h2>
-              {admin
-                ? "Klub pod kontrolou"
-                : coach
-                  ? "Príprava na tréning"
-                  : "Pripravení na ihrisko"}
-            </h2>
-            <p>
-              {admin
-                ? "Členská evidencia, program a klubové správy. Najčastejšie úlohy máte poruke."
-                : coach
-                  ? "Otvorte tréning, skontrolujte odpovede a zaznamenajte skutočnú účasť."
-                  : "Potvrďte účasť v detaile udalosti. Tréner tak vie, s kým môže počítať."}
-            </p>
-            <Link
-              className="text-link"
-              href={preview ? "/ukazka?view=kalendar" : "/klub/kalendar"}
-            >
-              Pozrieť program <ArrowUpRight size={16} />
-            </Link>
-            {admin && (
+          {!personal && (
+            <div className="feature-card">
+              <h2>
+                {admin
+                  ? "Klub pod kontrolou"
+                  : coach
+                    ? "Príprava na tréning"
+                    : "Pripravení na ihrisko"}
+              </h2>
+              <p>
+                {admin
+                  ? "Členská evidencia, program a klubové správy. Najčastejšie úlohy máte poruke."
+                  : coach
+                    ? "Otvorte tréning, skontrolujte odpovede a zaznamenajte skutočnú účasť."
+                    : "Potvrďte účasť v detaile udalosti. Tréner tak vie, s kým môže počítať."}
+              </p>
               <Link
-                className="metric-line"
-                href={preview ? "/ukazka?view=clenovia" : "/klub/clenovia"}
+                className="text-link"
+                href={preview ? "/ukazka?view=kalendar" : "/klub/kalendar"}
               >
-                Členská evidencia <Users size={17} aria-hidden />
+                Pozrieť program <ArrowUpRight size={16} />
               </Link>
-            )}
-            {(admin || coach) && (
-              <Link
-                className="metric-line"
-                href={preview ? "/ukazka?view=oznamy" : "/klub/oznamy"}
-              >
-                Klubové oznamy <ArrowUpRight size={17} aria-hidden />
-              </Link>
-            )}
-          </div>
+              {admin && (
+                <Link
+                  className="metric-line"
+                  href={preview ? "/ukazka?view=clenovia" : "/klub/clenovia"}
+                >
+                  Členská evidencia <Users size={17} aria-hidden />
+                </Link>
+              )}
+              {(admin || coach) && (
+                <Link
+                  className="metric-line"
+                  href={preview ? "/ukazka?view=oznamy" : "/klub/oznamy"}
+                >
+                  Klubové oznamy <ArrowUpRight size={17} aria-hidden />
+                </Link>
+              )}
+            </div>
+          )}
           <Panel
             title="Klubová nástenka"
             href={preview ? "/ukazka?view=oznamy" : "/klub/oznamy"}

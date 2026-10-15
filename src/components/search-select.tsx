@@ -101,6 +101,8 @@ export function SearchSelect({
       <div className="flex gap-2">
         <input
           id={id}
+          aria-invalid={!!error}
+          aria-describedby={error ? `${id}-error` : undefined}
           value={query}
           maxLength={160}
           placeholder="Meno alebo názov…"

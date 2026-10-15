@@ -56,6 +56,7 @@ export function Shell({
   roles,
   preview = false,
   finance = true,
+  previewView = "klub",
 }: {
   children: ReactNode;
   name: string;
@@ -64,6 +65,7 @@ export function Shell({
   roles: Role[];
   preview?: boolean;
   finance?: boolean;
+  previewView?: string;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -166,7 +168,9 @@ export function Shell({
             .filter((l) => (!l.admin || admin) && (!l.finance || finance))
             .map((link) => {
               const active = preview
-                ? link.href === "/klub"
+                ? link.href.split("/").pop() === previewView ||
+                  (link.href === "/klub" &&
+                    ["rodic", "trener", "hrac"].includes(previewView))
                 : link.href === "/klub"
                   ? pathname === link.href
                   : pathname.startsWith(link.href);
@@ -281,6 +285,62 @@ export function Shell({
         <main id="main" className="main-content">
           {children}
         </main>
+        <nav className="mobile-dock" aria-label="Rýchla navigácia">
+          <Link
+            href={preview ? "/ukazka" : "/klub"}
+            aria-current={
+              (
+                preview
+                  ? ["klub", "rodic", "trener", "hrac"].includes(previewView)
+                  : pathname === "/klub"
+              )
+                ? "page"
+                : undefined
+            }
+          >
+            <LayoutDashboard size={20} aria-hidden />
+            Prehľad
+          </Link>
+          <Link
+            href={preview ? "/ukazka?view=kalendar" : "/klub/kalendar"}
+            aria-current={
+              (
+                preview
+                  ? previewView === "kalendar"
+                  : pathname.startsWith("/klub/kalendar")
+              )
+                ? "page"
+                : undefined
+            }
+          >
+            <CalendarDays size={20} aria-hidden />
+            Program
+          </Link>
+          <Link
+            href={preview ? "/ukazka?view=oznamy" : "/klub/oznamy"}
+            aria-current={
+              (
+                preview
+                  ? previewView === "oznamy"
+                  : pathname.startsWith("/klub/oznamy")
+              )
+                ? "page"
+                : undefined
+            }
+          >
+            <Megaphone size={20} aria-hidden />
+            Oznamy
+          </Link>
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            aria-expanded={open}
+            aria-label="Otvoriť navigáciu"
+          >
+            <Menu size={20} aria-hidden />
+            Menu
+          </button>
+        </nav>
         <footer className="app-footer">
           <span>{club}</span>
           <span>Spolu na ihrisku aj mimo neho.</span>

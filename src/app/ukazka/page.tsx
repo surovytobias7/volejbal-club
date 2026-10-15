@@ -2,9 +2,10 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Shell } from "@/components/layout";
 import { Dashboard, type DashboardData } from "@/features/dashboard";
-import { EventList, PageHeading, Panel } from "@/components/shared";
+import { PageHeading, Panel } from "@/components/shared";
 import { Volleyball, ArrowUpRight } from "lucide-react";
 import { localToUtc, dateTime } from "@/lib/utils";
+import { CalendarView } from "@/features/calendar";
 export const dynamic = "force-dynamic";
 export default async function Preview({
   searchParams,
@@ -100,14 +101,38 @@ export default async function Preview({
     ];
     fixture.balance = 1500;
   }
+  if (view === "trener") {
+    fixture.roles = ["coach"];
+    fixture.balance = null;
+    fixture.pendingCount = 4;
+  }
+  if (view === "hrac") {
+    fixture.roles = ["player"];
+    fixture.teamCount = 1;
+    fixture.balance = 1500;
+    fixture.events = fixture.events.filter((event) => event.team_id === "u16");
+    fixture.teams = { u16: "Kadetky U16" };
+    fixture.eventCount = fixture.events.length;
+  }
   return (
-    <Shell name={fixture.name} club="Volej klub" roles={fixture.roles} preview>
+    <Shell
+      name={fixture.name}
+      club="Volej klub"
+      roles={fixture.roles}
+      preview
+      previewView={view}
+      finance={!fixture.roles.includes("coach")}
+    >
       <div className="notice">
         <strong>Ukážka rozhrania s fiktívnymi údajmi.</strong> Nie ste
         prihlásení. Zmeny sa neukladajú.{" "}
         <Link href="/nastavenie">Nastavenie aplikácie</Link>
         {" · "}
         <Link href="/ukazka?view=rodic">Ukážka rodičovského prehľadu</Link>
+        {" · "}
+        <Link href="/ukazka?view=trener">Tréner</Link>
+        {" · "}
+        <Link href="/ukazka?view=hrac">Hráč</Link>
       </div>
       {view === "kalendar" || view === "dochadzka" ? (
         <>
@@ -115,9 +140,13 @@ export default async function Preview({
             title={view === "dochadzka" ? "Dochádzka" : "Kalendár"}
             description="Ukážkový program. Skutočné udalosti budú dostupné po pripojení databázy."
           />
-          <Panel title="Dnešný program">
-            <EventList events={fixture.events} teams={fixture.teams} preview />
-          </Panel>
+          <CalendarView
+            events={fixture.events}
+            teams={fixture.teams}
+            days={[day]}
+            view="agenda"
+            preview
+          />
         </>
       ) : view === "timy" ? (
         <>
@@ -157,7 +186,7 @@ export default async function Preview({
             ))}
           </Panel>
         </>
-      ) : view && !["klub", "rodic"].includes(view) ? (
+      ) : view && !["klub", "rodic", "trener", "hrac"].includes(view) ? (
         <>
           <PageHeading
             title="Ukážka klubového priestoru"

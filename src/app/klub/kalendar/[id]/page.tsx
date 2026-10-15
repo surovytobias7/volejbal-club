@@ -117,39 +117,40 @@ export default async function EventDetail({
           Táto udalosť bola zrušená. Dochádzku už nie je možné meniť.
         </div>
       )}
-      <div className="two-columns">
+      <section className="event-brief" aria-label="Informácie o udalosti">
+        <div className="event-brief-body">
+          <div className="event-brief-facts">
+            <span>
+              <Clock size={20} aria-hidden />
+              {dateTime(event.starts_at)} – {dateTime(event.ends_at, "HH:mm")}
+            </span>
+            <span>
+              <MapPin size={20} aria-hidden />
+              {event.venue}
+            </span>
+          </div>
+          <p className="body-copy">
+            {event.description || "Bez ďalších pokynov."}
+          </p>
+          {event.kind === "match" && (
+            <p className="body-copy mt-4">
+              {event.home ? "Domáci" : "Vonkajší"} zápas ·{" "}
+              {event.opponent || "Súper zatiaľ neurčený"}
+              {event.score ? ` · Výsledok: ${event.score}` : ""}
+            </p>
+          )}
+          {event.series_id && (
+            <p className="muted mt-4">
+              Súčasť opakovanej série. Zmeny tohto výskytu neovplyvnia ostatné
+              termíny.
+            </p>
+          )}
+        </div>
+      </section>
+      <div
+        className={`two-columns event-detail-layout ${manage ? "" : "event-detail-personal"}`}
+      >
         <div className="stack">
-          <Panel title="Informácie o udalosti">
-            <div className="panel-body">
-              <div className="detail-meta">
-                <span>
-                  <Clock size={16} />
-                  {dateTime(event.starts_at)} –{" "}
-                  {dateTime(event.ends_at, "HH:mm")}
-                </span>
-                <span>
-                  <MapPin size={16} />
-                  {event.venue}
-                </span>
-              </div>
-              <p className="body-copy">
-                {event.description || "Bez ďalších pokynov."}
-              </p>
-              {event.kind === "match" && (
-                <p className="body-copy mt-4">
-                  {event.home ? "Domáci" : "Vonkajší"} zápas ·{" "}
-                  {event.opponent || "Súper zatiaľ neurčený"}
-                  {event.score ? ` · Výsledok: ${event.score}` : ""}
-                </p>
-              )}
-              {event.series_id && (
-                <p className="muted mt-4">
-                  Súčasť opakovanej série. Zmeny tohto výskytu neovplyvnia
-                  ostatné termíny.
-                </p>
-              )}
-            </div>
-          </Panel>
           <Panel title={manage ? "Tímová dochádzka" : "Vaša účasť"}>
             <form className="toolbar p-4">
               <label className="field">
@@ -161,15 +162,21 @@ export default async function EventDetail({
             </form>
             {players.length ? (
               <div className="data-table-wrap">
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>Hráč</th>
-                      <th>Odpoveď</th>
-                      <th>Skutočná účasť</th>
+                <table className="data-table responsive-table" role="table">
+                  <thead role="rowgroup">
+                    <tr role="row">
+                      <th scope="col" role="columnheader">
+                        Hráč
+                      </th>
+                      <th scope="col" role="columnheader">
+                        Odpoveď
+                      </th>
+                      <th scope="col" role="columnheader">
+                        Skutočná účasť
+                      </th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody role="rowgroup">
                     {players.map((p) => {
                       const r = availability.find(
                         (a) => a.player_id === p.profile_id,
@@ -178,8 +185,8 @@ export default async function EventDetail({
                         (a) => a.player_id === p.profile_id,
                       );
                       return (
-                        <tr key={p.profile_id}>
-                          <td>
+                        <tr role="row" key={p.profile_id}>
+                          <td role="cell" data-label="Hráč">
                             <Link
                               className="text-link"
                               href={`/klub/clenovia/${p.profile_id}`}
@@ -187,7 +194,7 @@ export default async function EventDetail({
                               {p.full_name}
                             </Link>
                           </td>
-                          <td>
+                          <td role="cell" data-label="Odpoveď">
                             <span
                               className={`badge ${r?.response === "yes" ? "success" : ""}`}
                             >
@@ -197,7 +204,7 @@ export default async function EventDetail({
                             </span>
                             {r?.reason && <small>{r.reason}</small>}
                           </td>
-                          <td>
+                          <td role="cell" data-label="Skutočná účasť">
                             {manage && event.status !== "cancelled" ? (
                               <ActionForm
                                 action={mutate}
@@ -254,7 +261,7 @@ export default async function EventDetail({
             />
           </Panel>
         </div>
-        <div className="stack">
+        <div className="stack event-actions">
           {manage && event.status === "scheduled" && (
             <Panel title="Chýbajúce odpovede">
               <div className="panel-body">

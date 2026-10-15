@@ -107,20 +107,30 @@ export default async function Attendance({
       <Panel title="História účasti">
         {page.items.length ? (
           <div className="data-table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Hráč</th>
-                  <th>Udalosť</th>
-                  <th>Dátum</th>
-                  <th>Účasť</th>
+            <table className="data-table responsive-table" role="table">
+              <thead role="rowgroup">
+                <tr role="row">
+                  <th scope="col" role="columnheader">
+                    Hráč
+                  </th>
+                  <th scope="col" role="columnheader">
+                    Udalosť
+                  </th>
+                  <th scope="col" role="columnheader">
+                    Dátum
+                  </th>
+                  <th scope="col" role="columnheader">
+                    Účasť
+                  </th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody role="rowgroup">
                 {page.items.map((r) => (
-                  <tr key={`${r.event_id}-${r.player_id}`}>
-                    <td>{r.full_name ?? "Hráč"}</td>
-                    <td>
+                  <tr role="row" key={`${r.event_id}-${r.player_id}`}>
+                    <td role="cell" data-label="Hráč">
+                      {r.full_name ?? "Hráč"}
+                    </td>
+                    <td role="cell" data-label="Udalosť">
                       {r.title ? (
                         <Link
                           className="text-link"
@@ -132,10 +142,10 @@ export default async function Attendance({
                         "Historická udalosť"
                       )}
                     </td>
-                    <td>
+                    <td role="cell" data-label="Dátum">
                       {r.starts_at ? dateTime(r.starts_at, "d. M. yyyy") : "—"}
                     </td>
-                    <td>
+                    <td role="cell" data-label="Účasť">
                       <span
                         className={`badge ${r.status === "present" ? "success" : r.status === "absent" ? "danger" : ""}`}
                       >

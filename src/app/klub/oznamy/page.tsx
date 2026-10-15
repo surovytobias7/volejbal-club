@@ -148,6 +148,7 @@ export default async function Announcements({
                     <FormDialog
                       title="Upraviť oznam"
                       label="Upraviť"
+                      variant="secondary"
                       description="Zmena publika okamžite mení prístup k oznamu aj jeho upozorneniam."
                     >
                       <ActionForm
@@ -180,6 +181,7 @@ export default async function Announcements({
                         hidden={{ command: "archive-announcement", id: a.id }}
                         fields={[]}
                         submit="Archivovať oznam"
+                        variant="secondary"
                       />
                     )}
                   </div>
