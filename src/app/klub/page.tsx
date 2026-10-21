@@ -4,6 +4,10 @@ import { rows, one } from "@/lib/data";
 import { financeSummarySchema } from "@/lib/finance";
 import { dashboardSummarySchema } from "@/lib/directories";
 import { guardianDashboardSchema } from "@/lib/guardian-dashboard";
+import {
+  playerResponsesSchema,
+  withPlayerResponses,
+} from "@/lib/player-dashboard";
 import { z } from "zod";
 export default async function DashboardPage({
   searchParams,
@@ -64,9 +68,36 @@ export default async function DashboardPage({
   const family = guardianDashboardSchema.parse(one(children));
   const upcoming = rows(events);
   const teamIds = [...new Set(upcoming.map((e) => e.team_id))];
-  const teams = teamIds.length
-    ? rows(await v.db.from("teams").select("id,name").in("id", teamIds))
-    : [];
+  const player = v.roles.includes("player") && upcoming.length > 0;
+  const [eventTeams, memberships, responses] = await Promise.all([
+    teamIds.length
+      ? v.db.from("teams").select("id,name").in("id", teamIds)
+      : Promise.resolve({ data: [], error: null }),
+    player
+      ? v.db
+          .from("team_memberships")
+          .select("team_id")
+          .eq("profile_id", v.id)
+          .eq("kind", "player")
+          .in("team_id", teamIds)
+      : Promise.resolve({ data: [], error: null }),
+    player
+      ? v.db
+          .from("availability")
+          .select("event_id,response")
+          .eq("player_id", v.id)
+          .in(
+            "event_id",
+            upcoming.map((event) => event.id),
+          )
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+  const teams = rows(eventTeams);
+  const personalEvents = withPlayerResponses(
+    upcoming,
+    rows(memberships).map((m) => m.team_id),
+    playerResponsesSchema.parse(rows(responses)),
+  );
   const finance =
     v.roles.includes("admin") ||
     v.roles.includes("guardian") ||
@@ -82,7 +113,7 @@ export default async function DashboardPage({
         eventCount: stats.event_count,
         balance: finance ? summary.remaining : null,
         participation: stats.participation,
-        events: upcoming,
+        events: personalEvents,
         teams: Object.fromEntries(teams.map((t) => [t.id, t.name])),
         teamCards: Object.fromEntries(
           rows(visibleTeams).map((t) => [t.id, t.name]),
@@ -113,6 +144,7 @@ export default async function DashboardPage({
                 charge_adjustments: "Oprava poplatku",
                 announcements: "Oznam",
                 club_settings: "Nastavenia klubu",
+                internal_notes: "Interná poznámka",
               } as Record<string, string>
             )[a.table_name] ?? "Klubová evidencia",
         })),

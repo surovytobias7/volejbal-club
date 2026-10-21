@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { z } from "zod";
 import { notFound } from "next/navigation";
-import { MapPin, Clock } from "lucide-react";
+import { EventBrief } from "@/components/event-brief";
 import { requireViewer } from "@/lib/auth";
 import { one } from "@/lib/data";
 import { eventRosterSchema } from "@/lib/rosters";
@@ -19,6 +19,7 @@ import { ActionForm } from "@/components/forms";
 import { FormDialog } from "@/components/ui/dialog";
 import { mutate } from "@/features/actions";
 import { eventFields } from "@/features/fields";
+import { InternalNotes } from "@/features/internal-notes";
 const availabilityNames: Record<string, string> = {
   yes: "Príde",
   no: "Nepríde",
@@ -117,36 +118,7 @@ export default async function EventDetail({
           Táto udalosť bola zrušená. Dochádzku už nie je možné meniť.
         </div>
       )}
-      <section className="event-brief" aria-label="Informácie o udalosti">
-        <div className="event-brief-body">
-          <div className="event-brief-facts">
-            <span>
-              <Clock size={20} aria-hidden />
-              {dateTime(event.starts_at)} – {dateTime(event.ends_at, "HH:mm")}
-            </span>
-            <span>
-              <MapPin size={20} aria-hidden />
-              {event.venue}
-            </span>
-          </div>
-          <p className="body-copy">
-            {event.description || "Bez ďalších pokynov."}
-          </p>
-          {event.kind === "match" && (
-            <p className="body-copy mt-4">
-              {event.home ? "Domáci" : "Vonkajší"} zápas ·{" "}
-              {event.opponent || "Súper zatiaľ neurčený"}
-              {event.score ? ` · Výsledok: ${event.score}` : ""}
-            </p>
-          )}
-          {event.series_id && (
-            <p className="muted mt-4">
-              Súčasť opakovanej série. Zmeny tohto výskytu neovplyvnia ostatné
-              termíny.
-            </p>
-          )}
-        </div>
-      </section>
+      <EventBrief event={event} />
       <div
         className={`two-columns event-detail-layout ${manage ? "" : "event-detail-personal"}`}
       >
@@ -163,6 +135,9 @@ export default async function EventDetail({
             {players.length ? (
               <div className="data-table-wrap">
                 <table className="data-table responsive-table" role="table">
+                  <caption className="sr-only">
+                    Plánované odpovede a skutočná účasť hráčov
+                  </caption>
                   <thead role="rowgroup">
                     <tr role="row">
                       <th scope="col" role="columnheader">
@@ -261,7 +236,7 @@ export default async function EventDetail({
             />
           </Panel>
         </div>
-        <div className="stack event-actions">
+        <div className="stack event-actions" id="odpovede">
           {manage && event.status === "scheduled" && (
             <Panel title="Chýbajúce odpovede">
               <div className="panel-body">
@@ -354,6 +329,9 @@ export default async function EventDetail({
           )}
         </div>
       </div>
+      {manage && event.kind === "training" && (
+        <InternalNotes context={{ eventId: id }} search={search} />
+      )}
     </>
   );
 }

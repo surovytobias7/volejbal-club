@@ -1,19 +1,19 @@
 ---
-name: Volej klub
-description: Prehľadný klubový priestor pre každodennú prácu.
+name: ŠŠK Gymnázium Bilíkova Bratislava
+description: Modrá, biela a červená identita školského volejbalového klubu.
 colors:
-  primary: "#17676a"
-  deep: "#123e43"
-  ink: "#18383d"
-  muted: "#5d7174"
-  background: "#f5f7f6"
+  primary: "#252b80"
+  deep: "#1d245b"
+  ink: "#1c2747"
+  muted: "#5e657b"
+  background: "#ffffff"
   surface: "#ffffff"
-  line: "#d9e2e0"
-  tint: "#e8f1ef"
-  warm: "#f4ae85"
-  focus: "#b6532b"
-  danger: "#9d303d"
-  control-border: "#78968d"
+  line: "#dfe3ed"
+  tint: "#eef1fb"
+  accent: "#ce2637"
+  focus: "#b82437"
+  danger: "#a32132"
+  control-border: "#8b94ae"
 typography:
   display:
     fontFamily: "Barlow Condensed, sans-serif"
@@ -47,11 +47,13 @@ components:
 
 ## Overview
 
-Záznam existujúcej identity a jej zdokonalenia z 15. 10. 2026. Autoritou implementácie sú `src/app/globals.css` a zdieľané komponenty. Zachované sú tmavozelená navigácia, teplý farebný detail, Manrope a športovo pôsobiace nadpisy Barlow Condensed. Výraz vychádza z programu, tímov a čitateľných údajov; nepotrebuje dekoráciu okolo každého záznamu.
+Identita potvrdená používateľom 18. 10. 2026: **ŠŠK Gymnázium Bilíkova Bratislava**. Dodané logo je uložené bez úprav v `public/brand/bilikova-logo.png` (145 × 200 px). Autoritou implementácie sú `src/lib/club-brand.ts`, `src/components/club-identity.tsx`, `src/app/globals.css` a zdieľané komponenty. Manrope a Barlow Condensed pokračujú v športovom typografickom základe. Výraz nesie vlastné klubové logo, silné členenie programu a modro-bielo-červená identita.
 
 ## Colors
 
-Zelená označuje navigáciu a primárnu akciu. Teplá farba podporuje najbližšiu udalosť a dôležité stavy. Úspech, chyba a splatnosť majú aj textový názov, nikdy iba farbu. Svetlé pozadie drží pracovné plochy čitateľné; tmavá plocha je vyhradená navigácii a zvýraznenej udalosti. Výber textu, kurzor, posuvníky a fokus používajú rovnakú paletu.
+Modrá označuje navigáciu, primárnu akciu a najbližšiu udalosť. Biela je hlavná pracovná plocha aj prirodzený podklad loga. Červená označuje aktívnu navigáciu a krátky klubový akcent; úspech si zachováva sémantickú zelenú. Chyba, splatnosť a účasť majú vždy aj textový názov. Výber textu, kurzor, posuvníky, fokus, kalendár a formulárové stavy používajú spoločné tokeny. Na modrej navigácii je fokus biely; na bielom podklade červený.
+
+Logo sa používa raz ako kotva obrazovky: na prihlásení a v desktope v záhlaví bočnej navigácie. Na mobile je v hornej lište a v otvorenom navigačnom dialógu. Pomer strán sa nemení; obrázok sa nepretvára na dekoratívnu ikonu. Nastavenia správcu môžu naďalej meniť názov a externé HTTPS logo autentifikovaného priestoru. Bez externého loga sa zobrazí dodaný klubový súbor. Verejné prihlasovacie stránky a metadáta používajú potvrdenú identitu.
 
 ## Typography
 
@@ -59,9 +61,11 @@ Obe písma sú lokálne z `@fontsource`. Barlow Condensed patrí hlavným nadpis
 
 ## Layout
 
-Bočný panel má na širokej obrazovke 232 px (210 px v užšom desktopovom rozložení). Do 900 px ho nahrádza otvárateľná navigácia. Do 700 px je k dispozícii spodná navigácia. Pracovná plocha má pružné stĺpce a maximálnu šírku 1580 px; mobilné okraje majú 16 px.
+Bočný panel zostáva pevný pri posúvaní stránky. Logo a spodný profil sa nezmenšujú; stredná navigácia využíva zvyšnú výšku a posúva sa iba pri skutočnom nedostatku miesta. Pri desktopovej výške do 800 px má hlavička minimálne 128 px a odkazy minimálne 44 px. Vyššie obrazovky zachovávajú voľnejší rytmus. Pri extrémne nízkom okne zostáva dostupné aj posúvanie celého panela; obsah sa neodrezáva.
 
-Prehľad začína krátkym pozdravom a najbližšou udalosťou. Program a úlohy majú viac váhy než štatistiky. Tímy tvoria zoznam s kategóriou a jasným vstupom do detailu. Agenda zoskupuje udalosti podľa dátumu; v skupine dátum neopakuje. Na úzkej obrazovke sa tabuľky menia na označené riadky pri zachovaní tabuľkovej sémantiky.
+Bočný panel má na širokej obrazovke 248 px (228 px v užšom desktopovom rozložení). Biele klubové záhlavie oddeľuje logo od modrej navigácie. Do 900 px panel nahrádza otvárateľná navigácia. Do 700 px je k dispozícii spodná navigácia. Pracovná plocha má pružné stĺpce a maximálnu šírku 1580 px; mobilné okraje majú 16 px. Prihlásenie na mobile ponecháva klubové záhlavie a formulár; veľký sprievodný slogan patrí desktopu.
+
+Prehľad začína krátkym pozdravom, samostatným pásom najbližšej udalosti a programom. Úlohy a správy sú dostupné v susednom stĺpci; súhrnné čísla nasledujú za pracovnými sekciami. Tímy tvoria zoznam s výraznou kategóriou a jasným vstupom do detailu. Agenda zoskupuje udalosti podľa dátumu; v skupine dátum neopakuje. Na úzkej obrazovke sa tabuľky menia na označené riadky pri zachovaní tabuľkovej sémantiky.
 
 ## Elevation & Depth
 
@@ -78,7 +82,11 @@ Ovládanie má mierne zaoblenie 6 px, samostatné plochy 12 px, dialóg 16 px. F
 - `Shell`: aktuálna sekcia v hornej lište; aktívna navigácia používa `aria-current`. Mobilný Radix dialóg uzamyká fokus, zatvára sa Escape a vracia fokus na vyvolávajúce tlačidlo. Prechod na desktop zatvorí otvorenú mobilnú navigáciu.
 - `FormDialog`: názov, opis, viditeľné zatvorenie a zdieľané formulárové stavy. Existujúce serverové akcie sa nemenia.
 - Pohyb: 120 ms spätná väzba, 180 ms bežná zmena, 260 ms otvorenie navigácie alebo dialógu; príchod používa `cubic-bezier(0.16, 1, 0.3, 1)`. Navigácia prichádza zľava, kam pri zatvorení odchádza. Stránky nemajú hromadné animované nástupy. `prefers-reduced-motion` nahrádza priestorový pohyb krátkou zmenou krytia a zastaví rotáciu a pulzovanie.
+- Jediný výraznejší pohybový detail: krátka červená linka najbližšej udalosti reaguje na hover a klávesnicový fokus. Neanimuje sa pri načítaní ani v slučke; obmedzený pohyb ju ponechá statickú.
 - Prázdne stavy pomenúvajú chýbajúci obsah a ďalší krok bez univerzálnej dekoratívnej ikony.
+- Členský detail používa otvorené kontaktné riadky (`dl`) a samostatné odkazy na program a históriu. Detail tréningu oddeľuje výrazný čas od miesta a pokynov; viacdňová udalosť uvádza aj dátum konca.
+- Osobná odpoveď hráča je text pri udalosti, oddelený od skutočnej dochádzky. Odkaz vedie na odpovede v detaile. Pri kombinovaných rolách sa označenie týka iba vlastného hráčskeho členstva.
+- Interné poznámky sú chronologický zoznam bez opakovaných kariet. Na desktope je formulár vedľa zoznamu, na mobile pred ním; poradie klávesnicového ovládania začína formulárom. Úprava používa existujúci dialóg, chyby zachovajú rozpracovaný text.
 
 ## Do's and Don'ts
 

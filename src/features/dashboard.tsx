@@ -5,6 +5,7 @@ import { money, dateTime } from "@/lib/utils";
 import type { GuardianChild } from "@/lib/guardian-dashboard";
 import type { Role } from "@/lib/auth";
 import { Pagination } from "@/components/pagination";
+import { ownResponseLabels } from "@/lib/player-dashboard";
 export type DashboardData = {
   name: string;
   roles: Role[];
@@ -45,7 +46,7 @@ export function Dashboard({
   const nextEvent = data.events.find((event) => event.status === "scheduled");
   const calendarHref = preview ? "/ukazka?view=kalendar" : "/klub/kalendar";
   const description = admin
-    ? "Všetko dôležité o vašom klube. Pripravení na ďalší spoločný deň."
+    ? "Program klubu, tímy a úlohy na najbližšie dni."
     : coach
       ? "Vaše tímy, najbližšie tréningy a dochádzka hráčov."
       : guardian
@@ -97,8 +98,10 @@ export function Dashboard({
     <>
       <div className={`dashboard-hero ${personal ? "dashboard-personal" : ""}`}>
         <div className="dashboard-welcome">
-          <h1>{`Dobrý deň, ${data.name.split(" ")[0]}`}</h1>
-          <p>{description}</p>
+          <div>
+            <h1>{`Dobrý deň, ${data.name.split(" ")[0]}`}</h1>
+            <p>{description}</p>
+          </div>
           <Link className="text-link" href={calendarHref}>
             <CalendarDays size={17} aria-hidden /> Otvoriť kalendár
           </Link>
@@ -106,10 +109,18 @@ export function Dashboard({
         {nextEvent ? (
           <Link
             className="next-session"
-            href={preview ? calendarHref : `/klub/kalendar/${nextEvent.id}`}
+            href={
+              preview
+                ? `/ukazka?view=udalost&event=${nextEvent.id}`
+                : `/klub/kalendar/${nextEvent.id}${nextEvent.own_response ? "#odpovede" : ""}`
+            }
           >
             <div className="next-session-time">
-              <strong>{dateTime(nextEvent.starts_at, "HH:mm")}</strong>
+              <strong>
+                <time dateTime={nextEvent.starts_at}>
+                  {dateTime(nextEvent.starts_at, "HH:mm")}
+                </time>
+              </strong>
               <span>{dateTime(nextEvent.starts_at, "EEEE, d. MMMM")}</span>
             </div>
             <div className="next-session-detail">
@@ -117,8 +128,16 @@ export function Dashboard({
               <p>
                 {data.teams[nextEvent.team_id]} · {nextEvent.venue}
               </p>
+              {nextEvent.own_response && (
+                <span className="next-session-response">
+                  {ownResponseLabels[nextEvent.own_response]}
+                </span>
+              )}
               <span className="next-session-caption">
-                Najbližšie na ihrisku <ArrowUpRight size={16} aria-hidden />
+                {nextEvent.own_response === "pending"
+                  ? "Odpovedať na účasť"
+                  : "Otvoriť udalosť"}{" "}
+                <ArrowUpRight size={16} aria-hidden />
               </span>
             </div>
           </Link>
@@ -142,19 +161,6 @@ export function Dashboard({
           </Link>
         </div>
       )}
-      <div className={`dashboard-stats ${personal ? "personal-stats" : ""}`}>
-        {stats
-          .filter((_, index) => !personal || index !== (guardian ? 1 : 0))
-          .map((s) => (
-            <section className="stat" key={s.label}>
-              <div className="stat-top">
-                <span>{s.label}</span>
-              </div>
-              <strong>{s.value}</strong>
-              <small>{s.hint}</small>
-            </section>
-          ))}
-      </div>
       <div className="dashboard-grid">
         <div className="stack">
           {(guardian || !!data.children?.length) && (
@@ -323,25 +329,12 @@ export function Dashboard({
           )}
           {!personal && (
             <div className="feature-card">
-              <h2>
-                {admin
-                  ? "Klub pod kontrolou"
-                  : coach
-                    ? "Príprava na tréning"
-                    : "Pripravení na ihrisko"}
-              </h2>
-              <p>
-                {admin
-                  ? "Členská evidencia, program a klubové správy. Najčastejšie úlohy máte poruke."
-                  : coach
-                    ? "Otvorte tréning, skontrolujte odpovede a zaznamenajte skutočnú účasť."
-                    : "Potvrďte účasť v detaile udalosti. Tréner tak vie, s kým môže počítať."}
-              </p>
+              <h2>{admin ? "Správa klubu" : "Príprava na tréning"}</h2>
               <Link
-                className="text-link"
+                className="metric-line"
                 href={preview ? "/ukazka?view=kalendar" : "/klub/kalendar"}
               >
-                Pozrieť program <ArrowUpRight size={16} />
+                Pozrieť program <ArrowUpRight size={17} aria-hidden />
               </Link>
               {admin && (
                 <Link
@@ -387,6 +380,21 @@ export function Dashboard({
             )}
           </Panel>
         </div>
+      </div>
+      <div
+        className={`dashboard-stats dashboard-summary ${personal ? "personal-stats" : ""}`}
+      >
+        {stats
+          .filter((_, index) => !personal || index !== (guardian ? 1 : 0))
+          .map((s) => (
+            <section className="stat" key={s.label}>
+              <div className="stat-top">
+                <span>{s.label}</span>
+              </div>
+              <strong>{s.value}</strong>
+              <small>{s.hint}</small>
+            </section>
+          ))}
       </div>
     </>
   );

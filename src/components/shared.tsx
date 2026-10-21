@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight, ArrowUpRight, CalendarDays, MapPin } from "lucide-react";
 import type { ReactNode } from "react";
 import { dateTime } from "@/lib/utils";
+import { ownResponseLabels, type OwnResponse } from "@/lib/player-dashboard";
 export function PageHeading({
   title,
   description,
@@ -84,6 +85,7 @@ export type EventRow = {
   score?: string | null;
   pending_count?: number;
   participant_count?: number;
+  own_response?: OwnResponse;
 };
 export function EventList({
   events,
@@ -108,7 +110,11 @@ export function EventList({
       {events.map((e) => (
         <Link
           className="event-row"
-          href={preview ? "/ukazka?view=kalendar" : `/klub/kalendar/${e.id}`}
+          href={
+            preview
+              ? `/ukazka?view=udalost&event=${e.id}`
+              : `/klub/kalendar/${e.id}${e.own_response ? "#odpovede" : ""}`
+          }
           key={e.id}
         >
           {showDate && (
@@ -137,19 +143,24 @@ export function EventList({
             <h3>{e.title}</h3>
             <p>
               <span>
-                <CalendarDays size={13} />
+                <CalendarDays size={13} aria-hidden />
                 {dateTime(
                   e.starts_at,
                   showDate ? "EEEE, HH:mm" : "HH:mm",
                 )} – {dateTime(e.ends_at, "HH:mm")}
               </span>
               <span>
-                <MapPin size={13} />
+                <MapPin size={13} aria-hidden />
                 {e.venue}
               </span>
             </p>
+            {e.status === "scheduled" && e.own_response && (
+              <span className={`event-response response-${e.own_response}`}>
+                {ownResponseLabels[e.own_response]}
+              </span>
+            )}
           </div>
-          <ArrowUpRight className="event-arrow" size={18} />
+          <ArrowUpRight className="event-arrow" size={18} aria-hidden />
         </Link>
       ))}
     </div>

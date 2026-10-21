@@ -59,8 +59,31 @@ Desktopová navigácia má sedem bežných sekcií, teda viac než štyri voľby
 - Pravidlá `prefers-reduced-motion` sú skontrolované v CSS: navigácia a dialóg bez posunu, spätná väzba ostáva, spinner a pulzovanie sa zastavia. Systémová emulácia zníženého pohybu a fyzické dotykové zariadenie neboli dostupným T3 rozhraním overené.
 - `npm test`: 113 testov v ôsmich súboroch prešlo (vrátane PGlite).
 - `npm run check`: TypeScript a ESLint prešli.
-- Produkčný build a záverečné potvrdenie: prebieha.
+- Produkčný build a záverečné potvrdenie tejto revízie prešli 15. 10.: desktop 1280 px, rodičovský prehľad 768 px, tímy 320 px, platby 390 px, prázdne vyhľadávanie a trénerská navigácia. Overené aj vypočítané veľkosti pomocného textu a mobilný návrat fokusu. Tento zápis opravuje pôvodný nedokončený stav dokumentácie.
 
 Živé Supabase/Auth/RLS integračné scenáre a produkčné finančné mutácie sa v tejto úlohe nespúšťali. Nevykonalo sa nasadenie. Náhľad zostáva explicitne povolený cez `ENABLE_DESIGN_PREVIEW=true` a používa výhradne fiktívne údaje.
 
 Questions skipped: používateľ už určil rozsah aj poradie práce a potvrdil vyvážené desktopové/mobilné použitie.
+
+## Pokračovanie — 16. 10. 2026
+
+Impeccable refinement/distill/polish pokračuje v zachovanej identite. Použité aj frontend-design, vercel-react-best-practices a aktuálne [Web Interface Guidelines](https://raw.githubusercontent.com/vercel-labs/web-interface-guidelines/main/command.md). Táto časť je cielená revízia, nie nové heuristické skórovanie celého produktu.
+
+### Nálezy a vykonané zmeny
+
+- `src/features/member-profile.tsx`: rovnocenné karty a veľký iniciálový blok nahradené otvorenými kontaktnými riadkami a odkazmi na program/históriu; kontakty používajú `dl`, dlhý text sa zalamuje.
+- `src/app/klub/kalendar/[id]/page.tsx`: dátum, čas a miesto mali rovnakú váhu. Zdieľaný `EventBrief` oddeľuje výrazný čas a deň od miesta/pokynov; viacdňový koniec má vlastný dátum. Tabuľka má opisný caption.
+- `src/features/dashboard.tsx`: chýbala vlastná plánovaná odpoveď pri udalosti. Nová textová odpoveď a priamy odkaz na jej ovládanie dopĺňajú informáciu bez ďalšej karty. Údaje sú odlišné od skutočnej dochádzky.
+- `src/components/notes-view.tsx`: nové poznámky používajú otvorený chronologický zoznam, jasného autora/čas, samostatný formulár a existujúci dialóg na úpravu. Žiadne dekoratívne ikony ani nové animované nástupy. Mobilné poradie formulára zodpovedá klávesnicovému ovládaniu.
+- `src/features/note-form.tsx`: riadený rozpracovaný text sa pri chybe nestratí; hlásenie má živý región a fokus, verzia ostáva zachovaná aj po chybe nasledujúcej po úspešnej úprave.
+- Náhľady člena/udalosti označujú správnu sekciu navigácie. Sú výslovne fiktívne; lokálne simulované poznámky zmiznú po obnovení.
+
+### Overenie a limity
+
+- `npm test`: **165/165, 11 súborov**. PGlite migrácie a oprávnenia, vstupy/kurzory, nové serverové akcie a osobné odpovede. Opravené dve chybné počiatočné testovacie prípravy, ktoré sa pokúšali zapisovať dostupnosť hráča cez administrátora; existujúca ochrana ich správne odmietla.
+- Záverečné `npm run check` (TypeScript + ESLint) a `npm run build` prešli. Generovanie typov z migrácií: 19 tabuliek, 21 RPC.
+- T3 na produkčnom builde: profil a poznámky 1280/390/320 px; tréning 1280/768/390 px; štyri hráčske odpovede 390 px. Bez horizontálneho presahu v skontrolovaných stavoch. Mobilné textarea má 16 px.
+- Náhľad poznámok: prázdny text z medzier vyvolá chybu, zachová draft a fokusuje pole; vytvorenie pridá záznam a vyprázdni pole. Opakovaná úprava zvýši verziu 1 → 2 → 3; chyba medzi úpravami zachová verziu 2. Dialóg používa `aria-modal=true`.
+- Záverečné potvrdenie po oprave náhľadovej navigácie: aktívna sekcia „Členovia“, dvojstĺpcové poznámky 1280 px a jeden stĺpec 390 px, formulár prvý aj v DOM. Escape po dokončení zatváracej animácie vráti fokus na príslušné tlačidlo „Upraviť“.
+- Vývojové HMR opäť zachovalo starší CSS chunk. Relevantné vizuálne kontroly preto prebehli na novom produkčnom builde, kde sa potvrdilo rozloženie poznámok a 32 px nadpis.
+- Hosted Supabase migrácia a autentifikované poznámkové workflow neboli spustené. Fyzický mobil a screen reader zostávajú otvorené. Redukovaný pohyb je skontrolovaný v CSS; systémová emulácia nie je doložená.

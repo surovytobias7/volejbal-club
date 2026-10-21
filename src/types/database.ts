@@ -477,6 +477,64 @@ export type Database = {
           },
         ];
       };
+      internal_notes: {
+        Row: {
+          id: string;
+          player_id: string | null;
+          event_id: string | null;
+          body: string;
+          author_id: string;
+          author_name: string;
+          created_at: string;
+          updated_at: string;
+          version: number;
+        };
+        Insert: {
+          id?: string;
+          player_id?: string | null;
+          event_id?: string | null;
+          body: string;
+          author_id?: string;
+          author_name?: string;
+          created_at?: string;
+          updated_at?: string;
+          version?: number;
+        };
+        Update: {
+          id?: string;
+          player_id?: string | null;
+          event_id?: string | null;
+          body?: string;
+          author_id?: string;
+          author_name?: string;
+          created_at?: string;
+          updated_at?: string;
+          version?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "internal_notes_player_id_fkey";
+            columns: ["player_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "internal_notes_event_id_fkey";
+            columns: ["event_id"];
+            isOneToOne: false;
+            referencedRelation: "events";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "internal_notes_author_id_fkey";
+            columns: ["author_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       member_details: {
         Row: {
           profile_id: string;
@@ -797,6 +855,10 @@ export type Database = {
         };
         Returns: Json;
       };
+      can_access_internal_notes: {
+        Args: { p_player: string | null; p_event: string | null };
+        Returns: boolean;
+      };
       charge_page: {
         Args: { p_after_due: string | null; p_after_id: string | null };
         Returns: Json;
@@ -838,6 +900,15 @@ export type Database = {
       finance_summary: { Args: { p_charge_id: string | null }; Returns: Json };
       guardian_dashboard: {
         Args: { p_at: string | null; p_after: string | null };
+        Returns: Json;
+      };
+      internal_notes_page: {
+        Args: {
+          p_player: string | null;
+          p_event: string | null;
+          p_before_at: string | null;
+          p_before_id: string | null;
+        };
         Returns: Json;
       };
       member_page: {

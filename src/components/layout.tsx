@@ -23,6 +23,8 @@ import {
 import type { ReactNode } from "react";
 import type { Role } from "@/lib/auth";
 import { logout } from "@/features/auth/actions";
+import { ClubIdentity } from "@/components/club-identity";
+import { clubBrand } from "@/lib/club-brand";
 
 const links = [
   { href: "/klub", label: "Prehľad", icon: LayoutDashboard },
@@ -95,75 +97,62 @@ export function Shell({
       <Link
         href={preview ? "/ukazka" : "/klub"}
         className="brand"
+        aria-label={`${club} – prehľad`}
         onClick={() => setOpen(false)}
       >
-        {logo ? (
-          <Image
-            src={logo}
-            width={42}
-            height={42}
-            alt=""
-            unoptimized
-            referrerPolicy="no-referrer"
-          />
-        ) : (
-          <span className="brand-symbol">
-            <Volleyball size={27} strokeWidth={1.8} aria-hidden />
-          </span>
-        )}
-        <span>
-          {club}
-          <small>Klubový priestor</small>
-        </span>
+        <ClubIdentity name={club} logo={logo} />
       </Link>
-      <div className="club-season">
-        <span className="season-dot" /> Sezóna {new Date().getFullYear()} /{" "}
-        {new Date().getFullYear() + 1}
-      </div>
-      <nav aria-label="Hlavná navigácia">
-        {links
-          .filter((l) => (!l.admin || admin) && (!l.finance || finance))
-          .map((link) => {
-            const active = preview
-              ? link.href.split("/").pop() === previewView ||
-                (link.href === "/klub" &&
-                  ["rodic", "trener", "hrac"].includes(previewView))
-              : link.href === "/klub"
-                ? pathname === link.href
-                : pathname.startsWith(link.href);
-            return (
+      <div className="sidebar-navigation">
+        <div className="club-season">
+          Sezóna {new Date().getFullYear()} / {new Date().getFullYear() + 1}
+        </div>
+        <nav aria-label="Hlavná navigácia">
+          {links
+            .filter((l) => (!l.admin || admin) && (!l.finance || finance))
+            .map((link) => {
+              const active = preview
+                ? link.href.split("/").pop() === previewView ||
+                  (link.href === "/klub" &&
+                    ["rodic", "trener", "hrac"].includes(previewView))
+                : link.href === "/klub"
+                  ? pathname === link.href
+                  : pathname.startsWith(link.href);
+              return (
+                <Link
+                  onClick={() => setOpen(false)}
+                  key={link.href}
+                  href={
+                    preview
+                      ? `/ukazka?view=${link.href.split("/").pop()}`
+                      : link.href
+                  }
+                  className={`nav-link ${active ? "active" : ""}`}
+                  aria-current={active ? "page" : undefined}
+                >
+                  <link.icon size={19} aria-hidden />
+                  {link.label}
+                </Link>
+              );
+            })}
+        </nav>
+        <nav className="sidebar-admin" aria-label="Správa klubu">
+          {admin &&
+            !preview &&
+            adminLinks.map((link) => (
               <Link
-                onClick={() => setOpen(false)}
                 key={link.href}
-                href={
-                  preview
-                    ? `/ukazka?view=${link.href.split("/").pop()}`
-                    : link.href
-                }
-                className={`nav-link ${active ? "active" : ""}`}
-                aria-current={active ? "page" : undefined}
+                className={`nav-link ${pathname === link.href ? "active" : ""}`}
+                href={link.href}
+                aria-current={pathname === link.href ? "page" : undefined}
+                onClick={() => setOpen(false)}
               >
                 <link.icon size={19} aria-hidden />
                 {link.label}
               </Link>
-            );
-          })}
-      </nav>
+            ))}
+        </nav>
+      </div>
       <div className="sidebar-bottom">
-        {admin &&
-          !preview &&
-          adminLinks.map((link) => (
-            <Link
-              key={link.href}
-              className={`nav-link ${pathname === link.href ? "active" : ""}`}
-              href={link.href}
-              aria-current={pathname === link.href ? "page" : undefined}
-              onClick={() => setOpen(false)}
-            >
-              <link.icon size={19} aria-hidden />
-              {link.label}
-            </Link>
-          ))}
         <div className="sidebar-profile">
           <span className="avatar">
             {name
@@ -236,7 +225,26 @@ export function Shell({
             >
               <Menu />
             </button>
-            <span className="breadcrumb">{section}</span>
+            <Link
+              href={preview ? "/ukazka" : "/klub"}
+              className="mobile-brand"
+              aria-label={`${club} – prehľad`}
+            >
+              <Image
+                src={logo || clubBrand.logo}
+                width={29}
+                height={40}
+                alt=""
+                unoptimized
+                referrerPolicy="no-referrer"
+              />
+            </Link>
+            <div className="topbar-location">
+              <span className="topbar-club" translate="no">
+                {club === clubBrand.name ? clubBrand.shortName : club}
+              </span>
+              <span className="breadcrumb">{section}</span>
+            </div>
             <div className="topbar-actions">
               <span className="today-label">
                 {new Intl.DateTimeFormat("sk-SK", {

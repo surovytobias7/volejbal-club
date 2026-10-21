@@ -1,4 +1,4 @@
-# Volej klub
+# ŠŠK Gymnázium Bilíkova Bratislava
 
 <!-- impeccable:product-schema 1 -->
 
@@ -25,11 +25,12 @@ Administratívne zoznamy a finančné záznamy potrebujú prehľadné porovnáva
 - Plánovaná dostupnosť a skutočná účasť sú oddelené údaje. Peniaze sú celočíselné centy; finančné opravy majú auditnú stopu.
 - Náhľad `/ukazka` je výslovne označený, povolený iba cez `ENABLE_DESIGN_PREVIEW=true` a oddelený od autentifikácie. Zlyhanie databázy sa nikdy nenahrádza ukážkovými údajmi.
 - Existujúce filtre, stránkovanie, formuláre, roly a väzby sa pri dizajnových úpravách zachovajú.
+- Potvrdené 16. 10. 2026: interné poznámky k hráčovi a jednotlivému tréningu číta administrátor a priradení tréneri; upravuje autor alebo administrátor. Samotná hráčska ani rodičovská rola prístup nemá. Autor po strate priradenia nemá trvalé právo na poznámku.
 - Žiadne tvrdenie o nasadení alebo produkčnej pripravenosti bez overenia. PGlite nenahrádza živé integračné overenie Supabase.
 
 ## Brand Commitments
 
-Existujúci názov rozhrania je Volej klub; názov a logo konkrétneho klubu sú konfigurovateľné. Texty majú byť vecné, priateľské a slovenské. Táto úloha je zdokonalenie existujúceho rozhrania so zachovaním funkcií.
+Používateľ 18. 10. 2026 určil identitu **ŠŠK Gymnázium Bilíkova Bratislava** a poskytol vlastné logo. Základné farby sú modrá, biela a červená: modrá nesie systém, biela pracovné plochy, červená výber a dôraz. Rozhranie má pôsobiť športovo, elegantne a primerane školskému klubu. Logo je výrazná kotva navigácie a prihlásenia, nie opakovaná dekorácia. Názov a externé logo autentifikovaného priestoru zostávajú konfigurovateľné. Texty sú vecné, priateľské a slovenské; všetky existujúce funkcie a oprávnenia sa zachovávajú.
 
 ## Evidence on Hand
 

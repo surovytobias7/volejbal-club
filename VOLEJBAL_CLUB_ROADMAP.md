@@ -1,7 +1,9 @@
 # Volleyball Club System — plán dokončenia a spustenia
 
-**Verzia:** 1.0  
-**Dátum:** 14. október 2026  
+**Verzia:** 1.2
+
+**Dátum:** 19. október 2026
+
 **Projekt:** `surovytobias7/volejbal-club`  
 **Pracovné prostredie:** T3 Code / Codex, Next.js, TypeScript, Supabase, GitHub  
 **Produkt:** Jediný volejbalový klub, slovenské používateľské rozhranie, roly administrátor / tréner / hráč / rodič.  
@@ -23,7 +25,8 @@
 ## Súčasný overený/predbežný stav
 
 - [x] Existuje Next.js aplikácia s prepojením na testovací Supabase projekt.
-- [x] Codex reportoval úspešných **113 automatických testov**, prechádzajúci typecheck, lint a build.
+- [x] Aktuálne **169 lokálnych automatických testov**; TypeScript, lint a build. Presné overenie a limity sú v `docs/PROGRESS.md`, `docs/UI_REVIEW.md` a `docs/BRAND_REVIEW.md`.
+- [x] Oficiálna identita **ŠŠK Gymnázium Bilíkova Bratislava**: pôvodné logo, modrá/biela/červená, zdieľané štýly, navigácia, prihlásenie a nové členenie prehľadu.
 - [x] Codex reportoval živé testovanie rolí, dochádzky, kalendára, financií, rodičovských odpovedí a hráčskeho profilu.
 - [x] Údaje testovacieho Supabase projektu sa nastavujú v lokálnom `.env.local`; skutočné tajomstvá nepatria do Git repozitára.
 - [ ] UI/UX prerábka prebieha; finálny vzhľad ešte nie je schválený.
@@ -34,6 +37,8 @@
 ## ETAPA 1 — Dokončiť originálny UI/UX dizajn (teraz)
 
 **Cieľ:** Prémiový športový dizajn bez generických „AI dashboard“ šablón, so zachovanými funkciami.
+
+- [x] Zapracovať potvrdený klubový dizajnový smer do zdieľaného systému a hlavných obrazoviek; pôvodné logo zachovať bez úprav. Vybrané náhľady pri 320–1280 px a formulárové/menu interakcie overené, úplná autentifikovaná matica zostáva otvorená.
 
 - [ ] Dopracovať typografiu, farebný systém, spacing, navigáciu, formuláre, tabuľky, loading/empty/error stavy a prístupnosť.
 - [ ] Prejsť všetky štyri roly a kľúčové obrazovky: dashboard, tímy, hráči, tréningy, kalendár, dochádzka, poplatky, oznámenia, profily, nastavenia, prihlasovanie.
@@ -48,8 +53,10 @@
 **Cieľ:** Zistiť, čo aplikácii naozaj chýba, a implementovať len relevantné medzery.
 
 - [ ] Porovnať aktuálny projekt s `docs/PROGRESS.md`, `docs/REQUIREMENTS_GAPS.md` a pôvodnými požiadavkami. Výsledok dať do prehľadu **hotové / chýba / chyba / nie je v rozsahu**.
-- [ ] **Poznámky v aplikácii:** spresniť, či ide o poznámky trénera k tréningu, hráčke, tímu alebo interné admin poznámky. Pred implementáciou odsúhlasiť, komu sa zobrazia a kto ich smie upravovať.
-- [ ] Ak sa poznámky potvrdia: návrh databázovej štruktúry, roly/prístupové pravidlá a RLS; vytvorenie, úprava, história podľa potreby, zobrazenie v UI a testy.
+- [x] **Poznámky:** používateľ 16. 10. potvrdil interné poznámky k hráčovi a tréningu. Čítajú administrátor/priradení tréneri, upravuje autor/administrátor; hráčska ani rodičovská rola prístup neposkytuje.
+- [x] Lokálna implementácia poznámok: databáza/RLS, serverová autorizácia, vytvorenie/úprava, audit, stránkovanie, verzovanie a UI/testy. Rozsah a dôkazy: `docs/INTERNAL_NOTES.md`.
+- [x] Aplikovať novú migráciu na testovací Supabase: 18. 10. overený stav 18 migrácií / 19 RLS tabuliek / 21 RPC; vybrané živé vytvorenie/čítanie a izolácia poznámok prešli.
+- [ ] Dokončiť živú akceptáciu úprav, auditu, revokácie, súbehu a mobilných formulárov poznámok podľa `docs/INTERNAL_NOTES.md`.
 - [ ] Skontrolovať existujúce moduly oznámení, profilov, dochádzky, financií, kalendára, upozornení a súvisiacich oprávnení.
 - [ ] Overiť proces pridania hráčky a bezpečné prepojenie na jej používateľský účet, prípadne účet rodiča; rodič môže mať viac detí. Hráčsky účet môže byť voliteľný podľa pravidiel klubu.
 - [ ] Rozhodnúť o importe hráčok/tímov (CSV/Excel), oprave duplicít, priradení do tímov a prípadnom variabilnom symbole na evidenciu platieb.
@@ -131,7 +138,7 @@
 ## Orientačná priorita / najbližšie tri kroky
 
 1. **Teraz:** dokončiť UI/UX redesign, zjednotiť mobil a desktop, otestovať regresie.
-2. **Potom:** vykonať audit chýbajúcich funkcií a dohodnúť presnú podobu **poznámok**; implementovať povinné medzery.
+2. **Potom:** overiť implementované interné poznámky na testovacom Supabase podľa `docs/INTERNAL_NOTES.md`; pokračovať v audite zostávajúcich povinných medzier.
 3. **Následne:** SMTP + šablóny + klikacie testy; potom bezpečný staging pre manažérku.
 
 > Poznámka: SMTP môže zostať technicky blokované do získania klubovej domény. To nesmie blokovať dizajn, samotné poznámky ani staging s existujúcimi testovacími účtami.

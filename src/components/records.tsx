@@ -67,7 +67,9 @@ export function MemberTable({
                 <Link
                   className="text-link"
                   href={
-                    preview ? "/ukazka?view=clen" : `/klub/clenovia/${p.id}`
+                    preview
+                      ? `/ukazka?view=clen&member=${p.id}`
+                      : `/klub/clenovia/${p.id}`
                   }
                 >
                   Otvoriť profil

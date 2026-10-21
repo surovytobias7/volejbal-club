@@ -25,6 +25,7 @@ const names: Record<string, string> = {
   charge_adjustments: "Oprava členského poplatku",
   announcements: "Klubový oznam",
   club_settings: "Nastavenia klubu",
+  internal_notes: "Interná poznámka",
 };
 export default async function Audit({
   searchParams,

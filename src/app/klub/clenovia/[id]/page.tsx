@@ -10,17 +10,21 @@ import { PageHeading, Panel } from "@/components/shared";
 import { ActionForm } from "@/components/forms";
 import { mutate } from "@/features/actions";
 import { memberFields, roleOptions, formValues } from "@/features/fields";
+import { InternalNotes } from "@/features/internal-notes";
+import type { NotesSearch } from "@/lib/notes";
 export default async function Member({
   params,
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ childAfter?: string }>;
+  searchParams: Promise<NotesSearch>;
 }) {
   const { id } = await params;
   if (!z.uuid().safeParse(id).success) notFound();
   const v = await requireViewer();
-  if (!v.roles.includes("admin")) return <MemberProfile id={id} />;
+  const search = await searchParams;
+  if (!v.roles.includes("admin"))
+    return <MemberProfile id={id} search={search} />;
   const p = one(await v.db.from("profiles").select("*").eq("id", id).single());
   const details = one(
     await v.db.from("member_details").select("*").eq("profile_id", id).single(),
@@ -29,7 +33,7 @@ export default async function Member({
     await v.db.from("user_roles").select("role").eq("profile_id", id),
   );
   const isGuardian = roles.some((r) => r.role === "guardian");
-  const childAfter = z.uuid().safeParse((await searchParams).childAfter).data;
+  const childAfter = z.uuid().safeParse(search.childAfter).data;
   let childRequest = v.db
     .from("guardian_players")
     .select("player_id,profiles!guardian_players_player_id_fkey(full_name)")
@@ -194,6 +198,9 @@ export default async function Member({
           </Panel>
         </div>
       </div>
+      {roles.some((role) => role.role === "player") && (
+        <InternalNotes context={{ playerId: id }} search={search} />
+      )}
     </>
   );
 }

@@ -1,0 +1,91 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { requireViewer } from "@/lib/auth";
+import { noteInputSchema } from "@/lib/notes";
+import type { NoteFormState } from "@/features/note-form";
+
+export async function saveInternalNote(
+  _: NoteFormState,
+  form: FormData,
+): Promise<NoteFormState> {
+  const viewer = await requireViewer();
+  if (!viewer.roles.includes("admin") && !viewer.roles.includes("coach"))
+    return { error: "Na interné poznámky nemáte oprávnenie." };
+  const parsed = noteInputSchema.safeParse({
+    id: form.get("id") || undefined,
+    version: form.get("version") ? Number(form.get("version")) : undefined,
+    player_id: form.get("player_id") || null,
+    event_id: form.get("event_id") || null,
+    body: form.get("body"),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  const input = parsed.data;
+  const { db } = viewer;
+  const permission = await db.rpc("can_access_internal_notes", {
+    p_player: input.player_id,
+    p_event: input.event_id,
+  });
+  if (permission.error)
+    return {
+      error: "Prístup k poznámke sa nepodarilo overiť. Skúste to znova.",
+    };
+  if (!permission.data)
+    return { error: "K tomuto hráčovi alebo tréningu už nemáte prístup." };
+  if (input.id) {
+    const current = await db
+      .from("internal_notes")
+      .select("author_id,player_id,event_id")
+      .eq("id", input.id)
+      .maybeSingle();
+    if (
+      current.error ||
+      !current.data ||
+      (current.data.author_id !== viewer.id &&
+        !viewer.roles.includes("admin")) ||
+      current.data.player_id !== input.player_id ||
+      current.data.event_id !== input.event_id
+    )
+      return { error: "Túto poznámku nemôžete upravovať." };
+  }
+  const result = input.id
+    ? await db
+        .from("internal_notes")
+        .update({ body: input.body })
+        .eq("id", input.id)
+        .eq("version", input.version!)
+        .select("id,body,version")
+        .maybeSingle()
+    : await db
+        .from("internal_notes")
+        .insert({
+          player_id: input.player_id,
+          event_id: input.event_id,
+          body: input.body,
+        })
+        .select("id,body,version")
+        .single();
+  if (result.error)
+    return {
+      error:
+        "Poznámku sa nepodarilo uložiť. Text zostal vo formulári; skúste to znova.",
+    };
+  if (!result.data)
+    return {
+      error:
+        "Poznámka sa medzitým zmenila alebo už nemáte prístup. Skopírujte si text a obnovte stránku.",
+    };
+  revalidatePath(
+    input.player_id
+      ? `/klub/clenovia/${input.player_id}`
+      : `/klub/kalendar/${input.event_id}`,
+  );
+  revalidatePath("/klub/audit");
+  revalidatePath("/klub");
+  return {
+    success: input.id
+      ? "Poznámka bola upravená."
+      : "Interná poznámka bola pridaná.",
+    note: result.data,
+  };
+}

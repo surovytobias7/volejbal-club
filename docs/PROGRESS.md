@@ -1,6 +1,53 @@
-# Progress - 2026-10-14
+# Progress - 2026-10-19
 
-## Current live milestone (supersedes the historical entries below)
+## Sidebar height correction — 19 October
+
+- Preserved existing uncommitted branding/feature work. Changed only shell navigation structure/styles and relevant documentation: logo and user profile are fixed flex regions; season, primary links and administrative links share the available middle region. Native `overflow-y: auto` activates only when needed. An outer auto-scroll fallback keeps content accessible in exceptionally short windows; no scrollbar hiding or clipped links.
+- At desktop heights up to 800 px, header minimum height is 128 px, navigation targets remain 44 px and vertical gaps tighten. Taller windows retain the 154 px header and 46 px links. Brand colors, role conditions, routing and mobile dialog behavior remain intact.
+- T3 production-preview inspection/screenshots at **1366×768, 1440×900, 1920×1080**, plus DOM inspection at **1024×768**: sidebar and middle region have equal scroll/client heights, all nine links fit and profile bottom stays 20 px above the viewport edge. The two admin-only links were temporarily inserted into the preview DOM using source-matched labels/classes; these are layout stress fixtures, **not real authenticated admin or permission evidence**. Removed fixtures by navigation afterward.
+- At **1280×600 and 1280×480**, only the middle region scrolls; at 480 px, keyboard Tab revealed the final administrative link with the profile still anchored. Scrolling the main page left sidebar top at 0 and sidebar scrollTop at 0. Mobile **390×844** visually checked; at **390×480**, focus revealed the last link without outer/horizontal overflow. Escape closed the drawer and returned focus to its trigger.
+- `npm run check` (TypeScript/ESLint), `npm test` (**169 tests / 12 files**), `npm run build`, Impeccable layout detector (`[]`) and `git diff --check` passed. Existing Vitest config warning remains. No live Supabase operations or new authentication acceptance in this follow-up.
+- Production preview restarted at `http://localhost:3000/ukazka`. No commit/push. No sidebar blocker found; next broader task remains the hosted notes acceptance matrix below.
+
+## Current milestone — Bilíkova branding and fictional coach demo
+
+- Resumed the uncommitted work on `feature/authenticated-workflow-acceptance` without restarting the redesign. Preserved the earlier notes, personal responses and UI changes. PRODUCT.md and DESIGN.md now record the user-confirmed **ŠŠK Gymnázium Bilíkova Bratislava** identity.
+- Original supplied PNG is preserved byte-for-byte (6,834 bytes, 145 × 200 px). Shared identity/config supplies login, sidebar, mobile header, metadata and app icon; configurable authenticated name/HTTPS logo remains supported. The dedicated test club name was updated through administrator RLS, leaving other settings intact.
+- Blue/white/red tokens now cover forms, tables, calendar, attendance, finances, announcements, details and shared states. Login/navigation composition was refined. Dashboard prioritizes the next event, program and direct tasks; summary metrics follow the working sections. Existing authentication, authorization, Slovak formatting and reduced-motion behavior remain. See [BRAND_REVIEW.md](BRAND_REVIEW.md).
+- On 18 October, created the requested fictional coach account and seeded **3 teams, 30 players, 24 events, 90 attendance records, 30 availability responses, 6 announcements and 15 notes**. Coach scope is 2 teams/22 players; the third team and finances are inaccessible. Credentials remain only in ignored local files. Repeat seed passed without resetting later edits; existing records retained. See [DEMO_CLUB.md](DEMO_CLUB.md).
+- Applied only reviewed additive migration `20261016090000_internal_notes.sql` to the explicitly matched test Supabase, transactionally recorded its history and reloaded PostgREST. Verified **18 migrations, 19 RLS tables, 21 public RPCs**. Authenticated coach/admin creation, coach RPC/SSR reads and guardian/unassigned-team isolation passed. Full hosted edit/revocation/concurrency/browser acceptance is still open.
+- Final 19 October verification: `npm run check`, `npm test` (**169 tests / 12 files**) and `npm run build` passed. Existing Vitest CommonJS-config warning remains. **13 real coach Auth/local production SSR checks** passed again, plus **23 admin/guardian/player Auth/SSR/logout checks**, covering settings, members, fee plans/payments, announcements, notifications and role dashboards. These 36 checks use the dedicated fictional-data Supabase and local production app; they are not full browser mutation acceptance.
+- First T3 pass covered login, all four role previews, teams, calendar, members, payments and training detail at selected 1280/768/390/320 px widths, without horizontal overflow or broken visible logos. Menu focus/Escape return and preview note submission passed. Preview interactions are separate from authenticated Supabase evidence.
+- Final production T3 confirmation: dashboard at 1280, login/training at 390 and player view at 320 showed no overflow/broken visible logos. Visible mobile input text is 16 px; mobile brand target is 44 px. Corrected the close button's focus color on its white background and verified keyboard-visible red focus. Escape closure/focus return was confirmed after the exit animation; an early timing check was inconclusive. T3 final mobile screenshot capture failed, while DOM/keyboard inspection worked; a desktop screenshot was saved. No fallback browser or app workaround was added.
+- Local production server retained at `http://localhost:3000` with explicit design previews enabled. `/ukazka` is unauthenticated fictional UI; `/prihlasenie` uses the real test accounts. Sanitized evidence: ignored `club-demo-http.json`, `club-brand-roles.json`, `brand-browser-report.json`; credentials remain ignored. `git diff --check` passed.
+
+### Next task and remaining gates
+
+1. Complete the remaining hosted notes matrix: second assigned coach editing denial, admin edits/audit, revoked author, concurrent versions and authenticated mobile mutation UI.
+2. Finish the full authenticated role/device review, family-link/finance workflows, screen-reader and physical-device checks.
+3. SMTP/domain, invitation partial-failure rehearsal, backup restoration and deployment remain separate release gates. No commit, push, merge or production deployment. Keep the local demonstration server available for the user.
+
+## Historical local milestone — 2026-10-16
+
+### UI refinement and internal notes
+
+- Continued from clean branch `feature/authenticated-workflow-acceptance`, commit `8cbd61f`; preserved the committed Impeccable design system and shell. Used the existing Graphify graph for targeted navigation and confirmed current source; no broad re-extraction or subagents.
+- Completed player-specific upcoming response presentation: pending/yes/no/maybe in the next event and program, direct links to response controls. Reads are bounded to five visible events, scoped to the current player's memberships and availability, including combined roles. Database errors remain errors.
+- Refined member contacts/program composition and the shared training brief. Added full end dates for events crossing midnight. Internal notes use an open chronological list, responsive composition and existing focus-managed dialogs; reduced-motion rules also cover profile-link motion.
+- User confirmed notes scope on 2026-10-16. Implemented notes for player profiles and individual training events: current assigned coaches/admin read, author/admin edit, immediate revocation, server-controlled authorship, 4,000-character limit, 25-row cursor pagination, optimistic edit version and audit of old/new content. Notes remain separate from availability reasons and public event instructions. See [INTERNAL_NOTES.md](INTERNAL_NOTES.md).
+- Added migration `20261016090000_internal_notes.sql` and regenerated types: **18 local migrations, 19 RLS tables, 21 public RPCs**. **The new migration has not been applied to hosted Supabase.** Missing/unavailable notes show an honest section error while the existing profile/event stays usable. No fixture fallback.
+- Local verification: **165 tests / 11 files passed** (PGlite plus unit tests, including server action authorization, direct database access, revocation, provenance, pagination and stale edits). Final TypeScript/ESLint and production build passed; production-preview confirmation also passed, including Escape focus return and mobile DOM order. Details in UI_REVIEW.md. Existing Vitest CommonJS warning remains.
+- T3 production-preview checks at 1280, 768, 390 and 320 px: profile/training notes and all four player response states; no horizontal overflow in checked views. Preview form creation, repeated edits, validation focus, retained draft and retained version after error passed. This uses explicit fictional in-memory preview data, **not hosted note persistence**.
+- Prior Impeccable shell/main-screen pass is committed in `8cbd61f`: its 113-test suite/check/build and final production-preview confirmation passed. Corrected the previously unfinished build entry in UI_REVIEW.md.
+- No automatic commit, push, merge or deployment. Existing hosted schema and historical live evidence below are unchanged.
+
+### Next task and remaining gates
+
+1. Review/apply only the new notes migration to the dedicated fictional-data Supabase project, then verify real Auth/PostgREST creation/editing and denial for guardian/player/unassigned coach, revoked author and stale concurrent editor. No hosted notes acceptance is claimed here.
+2. Complete the remaining authenticated UI review: settings, notifications, fee details, family-link pagination, empty/error/loading states and the full role/device matrix. Screen-reader and physical mobile-device checks remain open.
+3. SMTP/domain and actual delivery, invitation partial-failure rehearsal, backup restoration and deployment remain separate release gates. Notes do not require SMTP.
+
+## Latest live milestone — 2026-10-14 (historical evidence, not repeated here)
 
 - Browser continuation: authenticated T3 checks passed for administrator settings persistence, venue/category defaults, two weekly events across Bratislava DST (22/29 October at 18:00), coach single-occurrence venue edit and actual attendance, guardian independent sibling response, and player own response/contact persistence. Desktop 1280x800 and mobile 390x844 were used; this is selected workflow coverage, not the complete role/device matrix. Details in M4_LIVE_ACCEPTANCE.md.
 - Fixed reproduced UI issues: settings/audit/brand links now close mobile navigation; admin links indicate the active page; utility pages and fee plans show the correct section label. Verified mobile settings/audit navigation and Escape focus return in the rebuilt production app. Inaccessible/missing event details now show a Slovak unavailable page; actual database failures remain errors. Player denial and nonexistent UUID both verified, accessible event still works.

@@ -18,7 +18,7 @@ export default async function Profile() {
         title="Môj profil"
         description="Udržujte svoje kontaktné údaje aktuálne."
       />
-      <div className="two-columns">
+      <div className="member-profile-layout">
         <Panel title="Osobné údaje">
           <div className="panel-body">
             <ActionForm
@@ -41,16 +41,18 @@ export default async function Profile() {
             />
           </div>
         </Panel>
-        <Panel title="Váš klubový účet">
+        <Panel title="Váš klubový účet" plain>
           <div className="panel-body">
-            <div className="metric-line">
-              <span>Roly</span>
-              <strong>{v.roles.map((r) => roleNames[r]).join(", ")}</strong>
-            </div>
-            <div className="metric-line">
-              <span>E-mail v evidencii</span>
-              <strong>{details.email || "Neuvedený"}</strong>
-            </div>
+            <dl className="profile-facts">
+              <div>
+                <dt>Roly</dt>
+                <dd>{v.roles.map((r) => roleNames[r]).join(", ")}</dd>
+              </div>
+              <div>
+                <dt>E-mail v evidencii</dt>
+                <dd>{details.email || "Neuvedený"}</dd>
+              </div>
+            </dl>
             <p className="muted mt-4">
               Zmenu prihlasovacieho e-mailu, dátumu narodenia a prepojenia
               rodiny vybavuje správca klubu.
