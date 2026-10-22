@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import type { Role } from "@/lib/auth";
+import { canBrowseMembers } from "@/lib/access";
 import { logout } from "@/features/auth/actions";
 import { ClubIdentity } from "@/components/club-identity";
 import { clubBrand } from "@/lib/club-brand";
@@ -30,7 +31,7 @@ const links = [
   { href: "/klub", label: "Prehľad", icon: LayoutDashboard },
   { href: "/klub/kalendar", label: "Kalendár", icon: CalendarDays },
   { href: "/klub/timy", label: "Tímy", icon: Volleyball },
-  { href: "/klub/clenovia", label: "Členovia", icon: Users, admin: false },
+  { href: "/klub/clenovia", label: "Členovia", icon: Users, staff: true },
   { href: "/klub/dochadzka", label: "Dochádzka", icon: Activity },
   { href: "/klub/oznamy", label: "Oznamy", icon: Megaphone },
   {
@@ -58,7 +59,7 @@ export function Shell({
   logo,
   roles,
   preview = false,
-  finance = true,
+  finance = false,
   previewView = "klub",
 }: {
   children: ReactNode;
@@ -108,7 +109,11 @@ export function Shell({
         </div>
         <nav aria-label="Hlavná navigácia">
           {links
-            .filter((l) => (!l.admin || admin) && (!l.finance || finance))
+            .filter(
+              (l) =>
+                (!l.staff || canBrowseMembers(roles)) &&
+                (!l.finance || finance),
+            )
             .map((link) => {
               const active = preview
                 ? link.href.split("/").pop() === previewView ||

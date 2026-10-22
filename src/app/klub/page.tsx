@@ -98,10 +98,7 @@ export default async function DashboardPage({
     rows(memberships).map((m) => m.team_id),
     playerResponsesSchema.parse(rows(responses)),
   );
-  const finance =
-    v.roles.includes("admin") ||
-    v.roles.includes("guardian") ||
-    summary.count > 0;
+  const finance = v.canFinance;
   return (
     <Dashboard
       data={{

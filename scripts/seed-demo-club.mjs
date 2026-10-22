@@ -198,13 +198,8 @@ try {
     process.env.LIVE_ADMIN_EMAIL,
     process.env.LIVE_ADMIN_PASSWORD,
   );
-  const adminUser = checked(await admin.auth.getUser(), "admin_identity").user;
   const adminProfile = checked(
-    await admin
-      .from("profiles")
-      .select("id,active")
-      .eq("user_id", adminUser.id)
-      .single(),
+    await admin.rpc("viewer_context"),
     "admin_profile",
   );
   const adminRoles = checked(
@@ -214,7 +209,7 @@ try {
       .eq("profile_id", adminProfile.id),
     "admin_roles",
   );
-  if (!adminProfile.active || !adminRoles.some((row) => row.role === "admin"))
+  if (!adminProfile || !adminRoles.some((row) => row.role === "admin"))
     throw new Error("active_admin_required");
   // Fail before creating an identity if the pending notes migration is absent.
   checked(
@@ -308,13 +303,11 @@ try {
     admin,
     "team_memberships",
     [
-      ...state.teams
-        .slice(0, 2)
-        .map((team) => ({
-          team_id: team.id,
-          profile_id: state.coach.profileId,
-          kind: "coach",
-        })),
+      ...state.teams.slice(0, 2).map((team) => ({
+        team_id: team.id,
+        profile_id: state.coach.profileId,
+        kind: "coach",
+      })),
       ...state.teams.flatMap((team) =>
         team.players.map((player) => ({
           team_id: team.id,
@@ -361,16 +354,8 @@ try {
     process.env.LIVE_GUARDIAN_EMAIL,
     process.env.LIVE_GUARDIAN_PASSWORD,
   );
-  const guardianUser = checked(
-    await guardian.auth.getUser(),
-    "guardian_identity",
-  ).user;
   const guardianProfile = checked(
-    await guardian
-      .from("profiles")
-      .select("id")
-      .eq("user_id", guardianUser.id)
-      .single(),
+    await guardian.rpc("viewer_context"),
     "guardian_profile",
   );
   const children = state.teams
@@ -391,31 +376,27 @@ try {
     )
     .flatMap((event) => {
       const team = state.teams.find((row) => row.id === event.team_id);
-      return team.players
-        .slice(0, 3)
-        .map((player, i) => ({
-          event_id: event.id,
-          player_id: player.id,
-          response: ["yes", "no", "maybe"][i],
-          reason:
-            i === 1
-              ? "Ukážka: rodinný program."
-              : i === 2
-                ? "Ukážka: účasť ešte potvrdíme."
-                : "",
-        }));
+      return team.players.slice(0, 3).map((player, i) => ({
+        event_id: event.id,
+        player_id: player.id,
+        response: ["yes", "no", "maybe"][i],
+        reason:
+          i === 1
+            ? "Ukážka: rodinný program."
+            : i === 2
+              ? "Ukážka: účasť ešte potvrdíme."
+              : "",
+      }));
     });
   await insertOnce(guardian, "availability", responses, "event_id,player_id");
 
   stage = "internal_notes";
   // Notes have column-level grants: IDs are assigned by the database.
   const noteContexts = state.teams.flatMap((team) => [
-    ...team.players
-      .slice(0, 3)
-      .map((player) => ({
-        player_id: player.id,
-        body: "Ukážková interná poznámka: istý príjem, pri podaní sa sústrediť na pravidelný nadhod. Na najbližšom tréningu zaradiť krátky individuálny blok.",
-      })),
+    ...team.players.slice(0, 3).map((player) => ({
+      player_id: player.id,
+      body: "Ukážková interná poznámka: istý príjem, pri podaní sa sústrediť na pravidelný nadhod. Na najbližšom tréningu zaradiť krátky individuálny blok.",
+    })),
     ...state.events
       .filter(
         (event) =>

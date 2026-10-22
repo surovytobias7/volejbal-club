@@ -843,6 +843,7 @@ export type Database = {
         };
         Returns: Json;
       };
+      audit_actor_names: { Args: { p_ids: string[] | null }; Returns: Json };
       calendar_page: {
         Args: {
           p_from: string | null;
@@ -857,6 +858,10 @@ export type Database = {
       };
       can_access_internal_notes: {
         Args: { p_player: string | null; p_event: string | null };
+        Returns: boolean;
+      };
+      can_manage_announcement: {
+        Args: { p_id: string | null };
         Returns: boolean;
       };
       charge_page: {
@@ -911,6 +916,10 @@ export type Database = {
         };
         Returns: Json;
       };
+      link_member_account: {
+        Args: { p_id: string | null; p_user: string | null };
+        Returns: undefined;
+      };
       member_page: {
         Args: {
           p_query: string | null;
@@ -919,6 +928,7 @@ export type Database = {
         };
         Returns: Json;
       };
+      member_private_details: { Args: { p_id: string | null }; Returns: Json };
       payment_page: {
         Args: {
           p_charge_id: string | null;
@@ -964,6 +974,7 @@ export type Database = {
         Args: { p_name: string | null; p_phone: string | null };
         Returns: undefined;
       };
+      viewer_context: { Args: Record<string, never>; Returns: Json };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

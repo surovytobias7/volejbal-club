@@ -9,6 +9,13 @@ import { appUrl, publicEnvironment } from "@/lib/env";
 import { localToUtc } from "@/lib/utils";
 import type { FormState } from "@/components/forms";
 import { selectedIds } from "@/lib/selectors";
+import { memberPrivateDetailsSchema } from "@/lib/access";
+import {
+  requireEvent,
+  requireManagedTeam,
+  requireParticipation,
+  requireManagedAnnouncement,
+} from "@/lib/mutation-access";
 
 const uuid = z.uuid();
 const text = (max = 140) =>
@@ -196,16 +203,18 @@ export async function mutate(_: FormState, form: FormData): Promise<FormState> {
         const id = uuid.parse(data.id);
         const { data: profile, error } = await db
           .from("profiles")
-          .select("id,user_id,active,member_details(email)")
+          .select("id,active")
           .eq("id", id)
           .single();
         check({ error });
-        if (!profile?.active || profile.user_id)
+        const privateResult = await db.rpc("member_private_details", {
+          p_id: id,
+        });
+        check(privateResult);
+        const details = memberPrivateDetailsSchema.parse(privateResult.data);
+        if (!profile?.active || details.account_linked)
           throw new Error("Účet už je prepojený alebo je neaktívny.");
-        const details = profile.member_details as unknown as {
-          email: string;
-        } | null;
-        const email = z.email().parse(details?.email);
+        const email = z.email().parse(details.email);
         const env = publicEnvironment();
         const key = process.env.SUPABASE_SECRET_KEY;
         if (!env || !key)
@@ -221,13 +230,10 @@ export async function mutate(_: FormState, form: FormData): Promise<FormState> {
           throw new Error(
             "Pozvánku sa nepodarilo odoslať. Skontrolujte e-mail, nastavenie doručovania a existujúci účet v Supabase.",
           );
-        const linked = await db
-          .from("profiles")
-          .update({ user_id: invite.user.id })
-          .eq("id", id)
-          .is("user_id", null)
-          .select("id")
-          .single();
+        const linked = await db.rpc("link_member_account", {
+          p_id: id,
+          p_user: invite.user.id,
+        });
         if (linked.error)
           throw new Error(
             "Pozvánka bola odoslaná, ale účet sa nepodarilo prepojiť. Správca musí dokončiť prepojenie podľa dokumentácie.",
@@ -273,6 +279,8 @@ export async function mutate(_: FormState, form: FormData): Promise<FormState> {
         };
         if (event.ends_at <= event.starts_at)
           throw new Error("Koniec musí byť po začiatku udalosti.");
+        await requireManagedTeam(viewer, p.team_id);
+        if (data.id) await requireEvent(viewer, uuid.parse(data.id), true);
         if (data.id)
           check(
             await db
@@ -304,6 +312,7 @@ export async function mutate(_: FormState, form: FormData): Promise<FormState> {
             status: z.enum(["scheduled", "cancelled", "completed"]),
           })
           .parse(data);
+        await requireEvent(viewer, p.id, true);
         check(
           await db
             .from("events")
@@ -323,16 +332,8 @@ export async function mutate(_: FormState, form: FormData): Promise<FormState> {
             reason: optionalText(500),
           })
           .parse(data);
-        const {
-          data: { user },
-        } = await db.auth.getUser();
-        check(
-          await db.from("availability").upsert({
-            ...p,
-            updated_by: user!.id,
-            updated_at: new Date().toISOString(),
-          }),
-        );
+        await requireParticipation(viewer, p.event_id, p.player_id, false);
+        check(await db.from("availability").upsert(p));
         break;
       }
       case "attendance": {
@@ -343,16 +344,8 @@ export async function mutate(_: FormState, form: FormData): Promise<FormState> {
             status: z.enum(["present", "absent", "excused"]),
           })
           .parse(data);
-        const {
-          data: { user },
-        } = await db.auth.getUser();
-        check(
-          await db.from("attendance").upsert({
-            ...p,
-            updated_by: user!.id,
-            updated_at: new Date().toISOString(),
-          }),
-        );
+        await requireParticipation(viewer, p.event_id, p.player_id, true);
+        check(await db.from("attendance").upsert(p));
         break;
       }
       case "announcement": {
@@ -371,6 +364,12 @@ export async function mutate(_: FormState, form: FormData): Promise<FormState> {
         if (p.audience === "people" && !p.recipients.length)
           throw new Error("Vyberte aspoň jedného príjemcu.");
         if (p.audience !== "teams") admin();
+        else
+          await Promise.all(
+            p.teams.map((id) => requireManagedTeam(viewer, id)),
+          );
+        if (data.id)
+          await requireManagedAnnouncement(viewer, uuid.parse(data.id));
         const payload = {
           title: p.title,
           body: p.body,
@@ -397,6 +396,7 @@ export async function mutate(_: FormState, form: FormData): Promise<FormState> {
         break;
       }
       case "archive-announcement": {
+        await requireManagedAnnouncement(viewer, uuid.parse(data.id));
         check(
           await db
             .from("announcements")
@@ -510,12 +510,14 @@ export async function mutate(_: FormState, form: FormData): Promise<FormState> {
             .from("notifications")
             .update({ read_at: new Date().toISOString() })
             .eq("id", uuid.parse(data.id))
+            .eq("recipient_id", viewer.id)
             .select("id")
             .single(),
         );
         break;
       }
       case "send-reminders": {
+        await requireEvent(viewer, uuid.parse(data.event_id), true);
         const result = await db.rpc("send_event_reminders", {
           p_event: uuid.parse(data.event_id),
         });

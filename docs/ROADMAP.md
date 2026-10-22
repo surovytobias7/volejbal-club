@@ -1,6 +1,8 @@
 # Product UI roadmap
 
-Updated: 2026-10-19. It records the current implementation and redesign; it does not replace the live acceptance gates in M4_LIVE_ACCEPTANCE.md. PRODUCT.md and DESIGN.md hold the confirmed usage context and design rules.
+Updated: 2026-10-22. It records the current implementation and redesign; it does not replace the live acceptance gates in M4_LIVE_ACCEPTANCE.md. PRODUCT.md and DESIGN.md hold the confirmed usage context and design rules.
+
+22 October continuation: completed the nine reproduced authorization defects, explicit mutation guards, personal-role directory denial and finance eligibility navigation. The local suite now passes 250 tests. Two reviewed local migrations require a renewed Management connection/history inspection before applying to the dedicated test database. `npm run db:status` is read-only; no remote migration was applied. The app's new `viewer_context` dependency must be migrated before deployment. Current evidence and next steps are in PROGRESS.md and ACCESS_CONTROL_MATRIX.md; historical counts below remain milestone context.
 
 ## Design direction
 

@@ -134,7 +134,7 @@ export default async function Preview({
     fixture.name = "Nina Ukážková";
     fixture.roles = ["player"];
     fixture.teamCount = 1;
-    fixture.balance = 1500;
+    fixture.balance = null;
     fixture.events = fixture.events.filter((event) => event.team_id === "u16");
     fixture.events = fixture.events.map((event) => ({
       ...event,
@@ -152,28 +152,28 @@ export default async function Preview({
       full_name: "Nina Ukážková",
       roles: ["player"] as const,
       active: true,
-      user_id: "preview-nina",
+      account_linked: true,
     },
     {
       id: "adam",
       full_name: "Adam Ukážkový",
       roles: ["player"] as const,
       active: true,
-      user_id: null,
+      account_linked: false,
     },
     {
       id: "lucia",
       full_name: "Lucia Ukážková",
       roles: ["guardian"] as const,
       active: true,
-      user_id: "preview-lucia",
+      account_linked: true,
     },
     {
       id: "peter",
       full_name: "Peter Ukážkový",
       roles: ["coach"] as const,
       active: false,
-      user_id: "preview-peter",
+      account_linked: true,
     },
   ].map((member) => ({ ...member, roles: [...member.roles] }));
   const filteredMembers = members.filter((member) =>
@@ -234,7 +234,7 @@ export default async function Preview({
       previewView={
         view === "clen" ? "clenovia" : view === "udalost" ? "kalendar" : view
       }
-      finance={!fixture.roles.includes("coach")}
+      finance={fixture.balance !== null}
     >
       <details className="preview-banner">
         <summary>

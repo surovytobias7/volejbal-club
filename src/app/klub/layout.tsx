@@ -16,9 +16,7 @@ export default async function ClubLayout({
       club={club.name}
       logo={club.logo_url}
       roles={viewer.roles}
-      finance={viewer.roles.some((r) =>
-        ["admin", "guardian", "player"].includes(r),
-      )}
+      finance={viewer.canFinance}
     >
       {children}
     </Shell>

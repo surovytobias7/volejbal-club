@@ -39,6 +39,7 @@ export const announcementPageSchema = z.object({
       team_id: z.uuid().nullable(),
       extra_team_ids: z.array(z.uuid()),
       recipient_ids: z.array(z.uuid()),
+      audience: z.enum(["club", "teams", "people"]),
       can_manage: z.boolean(),
       author_name: z.string(),
       important: z.boolean(),

@@ -1,5 +1,6 @@
 import { ChargeTable, FinanceSummary } from "@/components/records";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { requireViewer } from "@/lib/auth";
 import { one } from "@/lib/data";
 import {
@@ -21,6 +22,7 @@ export default async function Payments({
   searchParams: FinanceSearch;
 }) {
   const v = await requireViewer();
+  if (!v.canFinance) notFound();
   const admin = v.roles.includes("admin");
   const cursor = financeCursor(await searchParams, "charges");
   const [summaryResult, pageResult] = await Promise.all([

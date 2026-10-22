@@ -32,7 +32,14 @@ export default async function Team({
     ? one(await v.db.from("club_settings").select("categories").single())
         .categories
     : [];
-  const team = one(await v.db.from("teams").select("*").eq("id", id).single());
+  const teamResult = await v.db
+    .from("teams")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  if (teamResult.error) throw new Error("Tím sa nepodarilo načítať.");
+  if (!teamResult.data) notFound();
+  const team = teamResult.data;
   const search = await searchParams;
   const q = directoryQuery(search);
   const baseCursor = directoryCursor(search);
@@ -87,7 +94,13 @@ export default async function Team({
           <Panel title="Najbližší program">
             <EventList events={events} />
           </Panel>
-          <Panel title="Členovia tímu">
+          <Panel
+            title={
+              v.roles.some((r) => r === "admin" || r === "coach")
+                ? "Členovia tímu"
+                : "Vaše členstvá v tíme"
+            }
+          >
             {memberships.length ? (
               <div className="data-table-wrap">
                 <table className="data-table responsive-table" role="table">

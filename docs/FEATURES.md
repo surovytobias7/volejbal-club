@@ -1,4 +1,14 @@
-# Feature status - 2026-10-19
+# Feature status - 2026-10-22
+
+## Aktuálne doplnenie — oprávnenia
+
+- Lokálne dokončené: serverové kontroly tímov, osobnej/rodičovskej odpovede a publika oznamov; odobratie poslednej roly a rodičovskej roly bez obnovy JWT; nemenné väzby účasti a ochrana presunu udalosti so súkromnou históriou.
+- Osobné roly nemajú členský adresár. Tréner číta dostupné profily a spravuje iba priradené tímy. Finančné stránky a navigácia používajú aktuálnu oprávnenosť administrátora, dospelého hráča alebo rodiča s prepojením; samotný tréner financie nezískava.
+- Minimalizované údaje: Auth identifikátory sa nevracajú v profiloch/adresári, presný dátum narodenia nie je dostupný trénerovi a adresný oznam neodhaľuje ďalších príjemcov. Administrácia účtu, oprávnené osobné údaje a audit používajú úzke RPC.
+- **250/250 lokálnych testov**, 14 súborov: 161 PGlite a 89 unit/mocked; 72 nových prípadov. Podrobné výsledky a limity: [PROGRESS.md](PROGRESS.md), aktuálne pravidlá: [ACCESS_CONTROL_MATRIX.md](ACCESS_CONTROL_MATRIX.md).
+- **Dve nové migrácie čakajú na živé overenie/aplikovanie.** Lokálne 20 migrácií / 19 RLS tabuliek / 26 RPC. Historicky na teste aplikovaných 18; aktuálnu históriu blokuje Management HTTP 401. Existujúci živý kontrakt prešiel 64 kontrolami; nový runner má 26 úspešných a 5 blokovaných kvôli chýbajúcemu `viewer_context`. Nové opravy zatiaľ nemajú hosted acceptance.
+
+Nasledujúce odseky opisujú historický stav do 19. októbra; aktuálne blokátory a postup majú prednosť.
 
 Implementation and local verification are separate from live acceptance. See [requirements gaps](REQUIREMENTS_GAPS.md) and the [live acceptance runbook](LIVE_ACCEPTANCE.md).
 

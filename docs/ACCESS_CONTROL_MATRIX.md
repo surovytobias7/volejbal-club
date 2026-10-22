@@ -1,6 +1,6 @@
 # Access control, architecture and privacy audit
 
-Audit started 2026-10-19. This is a product policy and verification register, not a production-security or GDPR certification. Existing changes were retained on `feature/authenticated-workflow-acceptance`. No production records are fixtures.
+Audit started 2026-10-19; implementation and local verification updated 2026-10-22. This is a product policy and verification register, not a production-security or GDPR certification. Existing changes were retained on `feature/authenticated-workflow-acceptance`. No production records are fixtures.
 
 ## Authority and scope
 
@@ -27,87 +27,71 @@ Read includes direct Data API/RPC, embeds, counts, search, filters and cursor pa
 | `/ukazka` | Explicit fictional design preview, feature-gated and isolated from authentication. Never a fallback after a failed database query. |
 | Server-only infrastructure | User-session Supabase client, `requireViewer`, mutation dispatcher, note action, selector action, CSP/no-store proxy, narrow Auth-admin invitation client, trusted scheduled reminder worker. No application Storage use. |
 
-### Database entities (19 before corrections)
+### Database entities (19)
 
 `profiles`, `member_details`, `user_roles`, `club_settings`, `teams`, `team_memberships`, `guardian_players`, `event_series`, `events`, `availability`, `attendance`, `announcements`, `fee_plans`, `charges`, `payments`, `charge_adjustments`, `notifications`, `audit_logs`, `internal_notes`.
 
-### Public RPC inventory (21 before corrections)
+### Public RPC inventory (26 locally; hosted upgrade pending)
 
-Writes: `create_member`, `edit_member`, `update_own_profile`, `create_event_batch`, `refresh_my_reminders`, `send_event_reminders`.
+Writes: `create_member`, `edit_member`, `update_own_profile`, `create_event_batch`, `refresh_my_reminders`, `send_event_reminders`, `link_member_account`.
 
-Reads: `finance_summary`, `charge_page`, `payment_page`, `dashboard_summary`, `member_page`, `team_page`, `attendance_page`, `announcement_page`, `selector_options`, `event_roster_page`, `team_roster_page`, `calendar_page`, `guardian_dashboard`, `can_access_internal_notes`, `internal_notes_page`.
+Reads: `finance_summary`, `charge_page`, `payment_page`, `dashboard_summary`, `member_page`, `team_page`, `attendance_page`, `announcement_page`, `selector_options`, `event_roster_page`, `team_roster_page`, `calendar_page`, `guardian_dashboard`, `can_access_internal_notes`, `internal_notes_page`, `viewer_context`, `member_private_details`, `audit_actor_names`, `can_manage_announcement`.
 
 All must be authenticated-only. Public invokers retain RLS; private definer helpers must use an empty search path, qualified names and caller-derived identity with explicit scope checks. The bulk reminder worker and trigger functions are not callable by application roles. Graphify traced `requireViewer` into pages, selectors and actions; source review supplements the graph because it predates notes and branding. No extraction/rebuild was needed.
 
-## Complete permission matrix
+## Aktuálna matica oprávnení
 
-`—` = forbidden. `I` = implementation reviewed; `F` = correction identified; `T/L/B` = local PostgreSQL / hosted Supabase / browser evidence. Verification is recorded per boundary in the evidence section; source review alone is not a passed test.
+Rozsahy sa sčítajú podľa platných rolí a väzieb. Nasledujúce opravy sú **implementované a overené lokálne**; nové migrácie ešte nemajú hosted acceptance. `T` = PostgreSQL/RLS v PGlite; `U` = unit/mocked server alebo route test. Historické live/browser dôkazy nepreukazujú nové opravy.
 
-| Role | Resource / operation | Read | Create | Update | Delete | Data scope / special conditions | Implementation / required correction | Verification |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| A | Member directory, names, contacts, birth dates | Yes | Yes | Yes | — | Club; deactivate instead of erasing | I; narrow Auth metadata access | Pending |
-| C | Member directory and contacts | Yes | — | — | — | Assigned rosters, plus own/family from other roles; exact birth-date policy pending | F: staff page guard, reduce metadata | Pending |
-| P | Member profile | Yes | — | Name/phone on own profile | — | Own only; no member administration or birth-date edits | F: remove directory navigation/page | Pending |
-| G | Member profiles | Yes | — | Name/phone on own profile | — | Own and linked children; child corrections through admin | F: remove directory navigation/page | Pending |
-| A | Roles, coach/player assignments | Yes | Yes | Yes | Remove relationship | Club; cannot remove own admin role | I; DB guards, audit | Pending |
-| C/P/G | Roles and team memberships | Scoped | — | — | — | Own roles; C roster memberships; P own memberships; G linked children; no other users' additive roles | I; stale-role cases to test | Pending |
-| A | Guardian-child relationships | Yes | Yes | Yes | Unlink | Club; guardian/player roles required; many-to-many | I | Pending |
-| G | Guardian-child relationships | Yes | — | — | — | Own explicit links only, requires current guardian role | F: consistent role revocation | Pending |
-| P | Guardian-child relationships | Own links | — | — | — | Own relationship identifiers only; no unrelated family | I | Pending |
-| C | Guardian-child relationships | — | — | — | — | Coaching alone never grants family administration | I | Pending |
-| A | Team definitions | Yes | Yes | Yes/archive/restore | — | Club; archival preserves history | I; tighten unused destructive grants | Pending |
-| C | Team definitions/rosters | Yes | — | — | — | Assigned teams; personal/family teams read-only under additional roles | I | Pending |
-| P | Teams/rosters | Yes | — | — | — | Own membership only; no private teammate roster | I; clarify roster labels | Pending |
-| G | Teams/rosters | Yes | — | — | — | Linked children's memberships only | I; clarify roster labels | Pending |
-| A | Events, matches, series | Yes | Yes | Yes/cancel/complete | — | Club; series atomic, one-occurrence edits | F: prevent transferring attached private records | Pending |
-| C | Events, matches, series | Yes | Yes | Yes/cancel/complete | — | Current assigned coaching team on both old and new record; read permission alone insufficient | F: explicit action scope checks | Pending |
-| P | Calendar/event detail | Yes | — | — | — | Membership teams; scoped counts | I | Pending |
-| G | Calendar/event detail | Yes | — | — | — | Teams of linked children; child filter cannot broaden scope | I | Pending |
-| A/C | Actual attendance | Yes | Yes | Correct status | — | Club / assigned event teams; active roster player, noncancelled event | F: immutable event/player keys; database timestamps | Pending |
-| P | Actual attendance/history/stats | Yes | — | — | — | Own only, including retained historical rows | I; direct-ID and aggregate regression cases | Pending |
-| G | Actual attendance/history/stats | Yes | — | — | — | Linked children only; revoked link removes access immediately | I; multi-child/multi-guardian cases | Pending |
-| A/C | Planned availability | Scoped | Own/family only | Own/family only | — | Team coaches read; coaching/admin role alone cannot impersonate a player's reply | F: explicit server scope; immutable keys | Pending |
-| P | Planned availability/reason | Yes | Yes | Yes | — | Own, active player membership, noncancelled event | F: database actor/time stamps | Pending |
-| G | Planned availability/reason | Yes | Yes | Yes | — | Currently linked children meeting event-player conditions | I/F: revocation and key integrity | Pending |
-| A | Fee plans, charges | Yes | Yes | Plan edit/archive; charge via adjustment only | — | Club; money integer cents, issued charge immutable | I; revoke unused plan deletion | Pending |
-| C | Financial information | — | — | — | — | Coach role grants none; additional personal/family scope remains separate | I; hide/deny finance routes without eligible scope | Pending |
-| P | Charges/payments/adjustments | Yes if adult | — | — | — | Own; verified birth date at least 18; missing date denies | I; navigation must use actual eligibility | Pending |
-| G | Charges/payments/adjustments | Yes | — | — | — | Linked children only; no other household's data | I | Pending |
-| A | Payment/reversal/charge adjustment | Yes | Yes | — | — | Append-only; lock charge, prevent overpayment, audit corrections | I; server-owned payment timestamp | Pending |
-| A | Announcements | Yes | Yes | Yes/archive | — | Club, teams or named recipients | F: recipient list only to managers | Pending |
-| C | Announcements | Scoped | Assigned teams | If manages every audience team | — | No club-wide or selected-person publishing; authorship alone gives no permanent access | F: explicit server check; audience masking | Pending |
-| P/G | Announcements/archive | Scoped | — | — | — | Relevant team/club notices or exact named recipient; named children do not implicitly share with guardians | F: no disclosure of other named recipients | Pending |
-| A/C/P/G | Notifications | Own/current scope | — | Own read timestamp | — | Recheck source, team/finance/family scope; no arbitrary title/href writes | I | Pending |
-| A/C | Event reminders | Scoped | Trigger fanout | — | — | Club/assigned team only; 48 hours, pending responses, deduplication | I; explicit action guard | Pending |
-| P/G | Self reminder refresh | Own | Own eligible reminders | — | — | Cannot choose another recipient or invoke bulk worker | I | Pending |
-| A | Internal player/training notes | Yes | Yes | Yes | — | Club, approved context; immutable author/context, correction audit | I; event scope must not move underneath note | Pending |
-| C | Internal player/training notes | Yes | Yes | Author only | — | Current assigned player teams / training team; author loses rights after revocation | I; full hosted edit/revocation coverage needed | Pending |
-| P/G | Internal notes | — | — | — | — | No automatic sharing, even when note concerns own child/self | I; direct table/RPC tests | Pending |
-| A | Settings and audit | Yes | — | Settings only | — | Club; audit immutable, raw old/new data private | I; bounded actor lookup | Pending |
-| C/P/G | Settings identity | Shared fields | — | — | — | Club name/logo/contact/venue/categories; management page/audit forbidden | I; page guard consistency | Pending |
-| A | Invitations/account linking | Linked status | Invite/link | Activate/deactivate | — | Active unlinked member, current admin; Auth service key used only server-side | F: narrow account-link RPC and status, no general Auth-ID exposure | Pending |
-| C/P/G | Invitations/access administration | — | — | — | — | Cannot bind identities or change roles | I | Pending |
-| All / anonymous | Login, recovery, password change | Auth UX | Recovery request | Own verified Auth session | Logout session | Generic recovery response, password rules, allowlisted callbacks; club deactivation still denies data | I | Pending |
-| Inactive/unlinked/no-role | Club data and actions | — | — | — | — | No stale-token bypass; auth recovery itself may still work | F: roleless-account closure | Pending |
+| Údaj / operácia | Administrátor | Tréner | Hráč | Rodič | Ochrana a dôkaz |
+| --- | --- | --- | --- | --- | --- |
+| Členský adresár | Celý klub, správa | Dostupné profily, čítanie | Bez adresára | Bez adresára | Server route + scoped `member_page`; T/U |
+| Profil a kontakty | Celý klub | Priradené tímy + rozsahy ďalších rolí | Vlastný profil | Vlastný profil a prepojené deti | RLS aj detail podľa ID; T |
+| Vlastné meno/telefón | Vlastné alebo administrácia | Vlastné | Vlastné | Vlastné | Úzke `update_own_profile` bez zmeny roly/dátumu/identity; T |
+| Presný dátum narodenia | Správa klubu | Vlastný, nie trénovaných členov | Vlastný | Vlastný a prepojených detí | Žiadny všeobecný SELECT; autorizované RPC; T |
+| Auth ID / stav účtu | Stav prepojenia; úzke prepojenie a auditné mená | Cudzie Auth ID ani stav účtu nie | Auth ID sa nevracia | Auth ID sa nevracia | Column grants blokujú aj WHERE/filter; admin RPC; T |
+| Roly, deaktivácia, členstvá | Správa; zákaz vlastnej demócie/deaktivácie | Povolené čítanie | Vlastné roly/členstvo | Povolené členstvo detí | Admin server guard a RLS; T/U |
+| Rodinné prepojenia | Vytvorenie/odobratie | Bez rodinnej administrácie | Vlastná väzba | Iba vlastné aktuálne väzby | Aktuálna guardian rola nutná aj pri zachovanej coach role; T/U |
+| Tímy a archív | Celý klub, správa/archivácia | Priradené + osobný rozsah na čítanie | Vlastné tímy | Tímy detí | RLS; nepoužívaný DELETE odobratý; T |
+| Súpiska | Celá | Súpiska vedených tímov | Vlastné členstvo | Členstvo detí | Scoped roster RPC, filtre a stránkovanie; T |
+| Kalendár a detail | Celý klub | Vedené + osobne dostupné tímy | Vlastné tímy | Tímy detí | RLS aj pre súhrny/počty; T |
+| Udalosť, séria, stav, pripomienky | Správa klubu | Iba vedené tímy | Bez správy | Bez správy | Server overuje aktuálny aj nový tím; RLS; T/U |
+| Presun udalosti do iného tímu | Iba bez odpovedí, dochádzky a poznámok | Navyše musí viesť oba tímy | — | — | DB trigger a zámok zápisov; sériové T, hosted súbeh čaká |
+| Plánovaná odpoveď a dôvod | Čítanie; odpoveď iba s vlastnou player/guardian rolou | Čítanie tímu; odpoveď iba s vlastnou player/guardian rolou | Vlastná odpoveď | Odpoveď prepojeného dieťaťa | Aktívny hráč/členstvo, nezrušená udalosť; T/U |
+| Skutočná dochádzka | Evidencia/opravovanie v klube | Evidencia vedených tímov | Vlastné údaje, čítanie | Údaje detí, čítanie | Samostatná tabuľka, nemenné event/player kľúče, DB actor/time; T/U |
+| História/štatistiky účasti | Celý klub | Vedené tímy | Vlastná história aj po odchode z tímu | História detí do revokácie väzby | RLS, kompletné SQL agregáty a kurzory; T |
+| Poplatky, platby a opravy | Správa klubu | Samotná coach rola žiadne financie | Vlastné od 18 rokov; bez dátumu nie | Iba prepojené deti | RLS + aktuálne `can_finance` pre route/navigation; T/U |
+| Platba, storno, oprava sumy | Append-only s auditom, limitmi a row lock | — | — | — | Admin guard, DB timestamp/actor, integer centy, audit; T/U |
+| Oznamy a archív | Klub/tímy/osoby, správa | Publikovanie/úprava len ak vedie všetky cieľové tímy | Relevantné oznamy | Relevantné oznamy | Server preverí staré i nové publikum; RLS; T/U |
+| Adresáti oznamu | Správa publika | Iba oprávnene spravované publikum | Ďalší adresáti skrytí | Ďalší adresáti skrytí | Column grant + bounded scoped RPC; T |
+| Upozornenia | Vlastné/aktuálny rozsah | Vlastné/aktuálny rozsah | Vlastné/aktuálny rozsah | Vlastné/aktuálny rozsah | Preverenie zdroja/väzby, iba vlastný read timestamp; T |
+| Interné poznámky | Čítanie/vytvorenie/úprava | Priradený tréner číta/vytvára; upravuje iba autor | — | — | RLS, server, nemenný kontext/autor, verzia/audit; T/U; hosted matrix čaká |
+| Nastavenia, audit, pozvánky | Administrácia | Iba zdieľaná klubová identita | Iba zdieľaná identita | Iba zdieľaná identita | Admin guard/RLS; úzke account-link RPC; T/U; doručovanie a partial failure čakajú |
+| Deaktivovaný/neprepojený/bez roly | Žiadny klubový prístup | Žiadny klubový prístup | Žiadny klubový prístup | Žiadny klubový prístup | Aktuálny profil a rola v `private.viewer()`, bez refresh JWT; T |
+| Anonymný návštevník | Žiadny klubový prístup | Žiadny klubový prístup | Žiadny klubový prístup | Žiadny klubový prístup | RLS/grants; preview oddelený; T + existujúci live preflight |
 
-## Prioritized findings and correction plan
+## Opravené nálezy a hranice overenia
 
-1. **High — scope transfer through mutable parent records.** An event can be reassigned to a different team even after private availability/attendance/training notes exist. Policies then evaluate the new team and can expose old players' records. Reproduce, then deny a team transfer once attached private/history records exist, while retaining edits and empty-event reassignment.
-2. **Medium — record provenance mutable through direct API.** Availability/attendance event-player keys and timestamps accept client values. RLS prevents unrelated targets but allows moving a legitimate row to another authorized child/event and falsifying correction time. Make keys immutable and stamp actor/time in DB; preserve status/response corrections.
-3. **Medium — unnecessary field exposure.** Profile Auth IDs and named-announcement recipient IDs are directly readable with authorized rows. IDs are not credentials, but their exposure is not required. Replace broad access with safe columns, bounded checked helpers and manager-only audience details. Birth-date exposure needs the policy decision below.
-4. **Medium — roleless/revoked role consistency.** Active profile without roles can retain shared club access; family helpers need an explicit current guardian role rather than relying on incidental join behavior. Align helpers, pages and tests.
-5. **Medium — server action defense and UX.** Several coaching actions rely exclusively on RLS after authentication. Add explicit resource checks before writes; retain RLS for races/direct clients. Finance navigation currently uses the player role, not age/relationship eligibility. Member administration is offered to personal roles. Correct both navigation and route guards.
-6. **Low — redundant/unused privileges and audit.** Admin delete grants exist for records whose UI promises archival/history preservation. Restrict these to implemented relationship removals. Announcement audit has two triggers; retain one to avoid duplicate audit entries.
+1. Deväť existujúcich auditných testov reprodukovalo reálne chyby: dva presuny súkromného kontextu cez udalosť, dve zmeny event/player väzby, falšovateľný čas, tri nadbytočné čítania citlivých polí a prístup bez roly. Všetky prechádzajú; testy sa neoslabili.
+2. Server Actions overujú aj viditeľné, ale nespravované zdroje. Čítanie tímu cez dieťa alebo vlastné členstvo nedáva právo evidovať dochádzku.
+3. Oprávnené osobné údaje používajú úzky RPC. Staršia regresia vlastného profilu číta dátum cez nový kontrakt a naďalej dokazuje, že neoprávnená zmena nič nezmenila. Priamy SELECT má samostatné negatívne testy.
+4. Caller-only RLS podmienky používajú statement-local init plans; stav účtu sa počíta iba pre stránku. Kompletné súhrny a stránkovanie nad 1 000 záznamov prechádzajú bez zvýšenia 20-sekundového limitu.
+5. Obmedzené nepoužívané DELETE grants; odstránený iba duplicitný auditný trigger oznamov. Žiadne záznamy sa nemažú. Finančné korekcie/audit a bezpečné archivovanie zostávajú.
+
 
 ## Privacy decisions
 
-- **Awaiting club decision:** exact birth date for assigned coaches; requested safe option is name/contact access without exact date. Existing UI does not display the date. Do not silently broaden this.
+- **Current safe rule:** assigned coaches receive names/contacts without exact birth dates. The API now enforces this. Broader coaching access would require a club decision; personal/guardian roles retain their own scope.
 - **Awaiting club decision:** guardian access after a child's 18th birthday. Existing documented behavior retains an explicit link until admin revocation; no automatic new sharing or consent is inferred.
 - **Before deployment:** club management must define retention periods and lawful administrative processes for account removal, attendance, financial ledgers, notes, audit snapshots and backups; who can approve an erasure/export; verification of guardian authority; access review and staff departure procedures. No speculative automated erasure or export implemented.
 - Internal notes keep the previously approved single private scope. No public/shared note type or medical dossier added. Note/absence text should describe useful sporting context without unnecessary health or family detail.
 
 ## Evidence register
 
-Pending execution in this audit. Historical 169-test and live results in PROGRESS.md are context, not proof of newly identified cases. Local tests execute actual PostgreSQL RLS in PGlite; live tests must use real fictional Auth sessions and the explicitly matched test Supabase. Browser evidence must distinguish authenticated pages from `/ukazka` fixtures.
+- `npm test -- --reporter=dot`: **250 passed / 14 files**. **161 PostgreSQL/RLS tests in PGlite**, **89 unit/mocked tests**, including 37 Server Action authorization and 5 direct route denials. This does not prove independent hosted concurrent sessions or browser mutations.
+- Local schema: 20 migrations / 19 RLS tables / 26 public RPCs. The two 22 October migrations preserve records and existing history; earlier migration files are unchanged.
+- Existing hosted schema: 11/11 preflight and 64/64 legacy-contract Auth/PostgREST checks passed on 22 October. After updating the runner for the new contract: 26 passed, 5 blocked by missing `viewer_context` (`PGRST202`). **New fixes have not been verified on hosted Supabase.**
+- `npm run db:status`: blocked by Management HTTP 401; direct DB hostname returned ENOTFOUND. The last documented applied history is 18 migrations on 18 October. Current history/order must be verified before applying the two pending local migrations; no remote changes were made here.
+- T3 UI evidence and final check/build status are recorded in PROGRESS.md. Preview/navigation inspection is separate from real authorization acceptance. No production deployment/readiness claim.
 
-Technical references reviewed: [Supabase RLS and grants](https://supabase.com/docs/guides/database/postgres/row-level-security), [column privileges](https://supabase.com/docs/guides/database/postgres/column-level-security). Both grants and row policies must permit an operation; row visibility alone does not minimize returned columns.
+Technical references: [Supabase RLS and grants](https://supabase.com/docs/guides/database/postgres/row-level-security), [column privileges](https://supabase.com/docs/guides/database/postgres/column-level-security). Both grants and row policies must permit an operation. Statement-local caller predicates improve query cost without introducing cross-request authorization caches.

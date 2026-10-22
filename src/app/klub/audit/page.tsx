@@ -1,5 +1,6 @@
 import { requireAdmin } from "@/lib/auth";
-import { rows } from "@/lib/data";
+import { rows, one } from "@/lib/data";
+import { auditActorsSchema } from "@/lib/access";
 import { PageHeading, Panel, Empty } from "@/components/shared";
 import { dateTime } from "@/lib/utils";
 import { Pagination } from "@/components/pagination";
@@ -47,11 +48,8 @@ export default async function Audit({
     ...new Set(logs.map((l) => l.actor_id).filter((id): id is string => !!id)),
   ];
   const actors = actorIds.length
-    ? rows(
-        await v.db
-          .from("profiles")
-          .select("user_id,full_name")
-          .in("user_id", actorIds),
+    ? auditActorsSchema.parse(
+        one(await v.db.rpc("audit_actor_names", { p_ids: actorIds })),
       )
     : [];
   return (

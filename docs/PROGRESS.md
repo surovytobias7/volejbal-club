@@ -1,4 +1,32 @@
-# Progress - 2026-10-19
+# Progress - 2026-10-22
+
+## Pokračovanie auditu oprávnení — 22. október
+
+- Obnovený skutočný stav: vetva `feature/authenticated-workflow-acceptance`, commit `99e375d`, čistý pracovný strom. Rozpracované zmeny boli už v commite. Prvý beh mal **169 úspešných a 9 zlyhávajúcich testov (178 spolu)**, nie hlásených 218/3. Všetkých deväť zlyhaní boli reprodukované bezpečnostné chyby v už pridanom audite; žiadny test nebol vypnutý.
+- Dve nové, lokálne overené migrácie: `20261022081940_access_integrity.sql` a `20261022081942_private_fields_and_access_context.sql`. Pôvodných 18 migrácií zostalo bez zmeny. Spolu **20 lokálnych migrácií, 19 RLS tabuliek a 26 verejných RPC**; typy regenerované z PGlite.
+- Udalosť s odpoveďami, skutočnou dochádzkou alebo internými poznámkami nemožno presunúť do iného tímu. Väzby udalosti/hráča sú nemenné; databáza určuje autora a čas zápisu účasti aj platieb. Zápisy do udalosti používajú zámok spoločný s úpravou jej tímu. Bežné opravy a presun prázdnej udalosti zostali funkčné. Finančný audit zostáva zachovaný; duplicitný audit oznamov bol odstránený.
+- Aktuálna rola a rodinná väzba sa preverujú aj pri kombinovaných rolách. Odobratie poslednej roly uzatvára klubový prístup. Nový minimálny `viewer_context` poskytuje aktuálne finančné oprávnenie; neobsahuje Auth ID ani dátum narodenia.
+- Column grants zakazujú priame čítanie/filtrovanie Auth ID, presného dátumu narodenia a zoznamu adresátov. Úzke RPC zachovávajú oprávnené osobné/rodičovské/administrátorské čítanie, prepojenie účtu a audit. Oznam príjemcovi neprezrádza ďalších adresátov; správca môže publikum naďalej upravovať. Trénerovi sa presný dátum narodenia neposkytuje.
+- Server Actions overujú starý aj nový tím udalosti, aktuálne trénerstvo, oprávneného hráča/rodiča, platné členstvo a všetky tímy publika oznamu pred zápisom. RLS ostáva konečnou kontrolou pri súbehu a priamom API prístupe. Navigácia aj priame stránky blokujú členský adresár osobným rolám a financie bez oprávneného rozsahu. Profily vlastných/prepojených členov zostávajú dostupné cez scoped detail.
+- Pridaných **72 regresných prípadov**: 30 databázových, 37 izolovaných testov Server Actions a 5 testov priamych stránok. Aktuálne `npm test -- --reporter=dot`: **250/250, 14 súborov** (161 PGlite, 89 unit/mocked). Test nad 1 000 záznamov najprv prekročil pôvodných 20 s; optimalizované boli statement-local RLS kontroly a výpočet stavu účtu iba na zobrazenej stránke. Limit a rozsah testu sa nezmenili.
+- Finálny `npm run check`, produkčný build a T3 kontrola: výsledok sa doplní po dokončení overenia.
+
+### Živá databáza a blokátory
+
+- Read-only preflight: **11/11**. Pôvodný kontrakt živej databázy: **64/64** kontrol Auth/PostgREST, vrátane štyroch aktívnych rolí a deaktivovaného účtu. Toto overuje existujúcu schému, nie nové opravy.
+- Aktualizovaný `npm run test:live`: **26 úspešných, 5 blokovaných**, pretože `viewer_context` na vzdialenej Data API chýba (`PGRST202`). Neúspech schémy sa nepočíta ako úspešné odmietnutie oprávnenia.
+- Nový read-only `npm run db:status` zisťuje verzie, neznáme migrácie a nesprávne poradie. Teraz blokovaný: **Management HTTP 401**. Priame TLS pripojenie cez štandardný DB hostname skončilo `ENOTFOUND`. Aktuálnu vzdialenú migračnú históriu preto nemožno potvrdiť; **18 aplikovaných migrácií je historicky doložený stav z 18. októbra**.
+- Nové dve migrácie neboli vzdialene aplikované. Žiadne vzdialené klubové záznamy neboli vytvorené, upravené ani odstránené; live runner iba prihlásil a odhlásil vlastné testovacie relácie. Reporty sú v ignorovanom `test-results/`, bez prihlasovacích údajov.
+
+### Nasledujúce úlohy
+
+1. Obnoviť súkromne prístup k histórii testovacieho Supabase; spustiť `npm run db:status`. Potvrdiť presných 18 predchodcov a následne aplikovať iba uvedené dve migrácie v poradí, bez seedu/resetu. Aplikácia teraz vyžaduje nový RPC kontrakt; nenasadzovať ju pred migráciami.
+2. Zopakovať aktuálny live runner a celý negatívny audit cez Auth/PostgREST; overiť aj súbeh vloženia účasti/poznámky s presunom udalosti v samostatných databázových reláciách. PGlite to nenahrádza.
+3. Pokračovať v živých úpravách/revokácii/súbehu poznámok a autentifikovaných mobilných formulároch, potom rodinné a finančné workflow. SMTP/doména, pozvánky pri čiastočnom zlyhaní, obnova zálohy a nasadenie ostávajú otvorené.
+
+Graphify bol použitý bez obnovy grafu; zdroje skontrolované priamo, pretože graf predchádza auditu. Žiadny skorší klubový repozitár ani agent nebol použitý. Supabase skill/konektor v tejto relácii nebol dostupný; overené boli oficiálne dokumenty RLS/column grants a existujúce lokálne nástroje. Použité React, frontend-design a Impeccable pravidlá; branding a logo zachované. Žiadny commit, push, merge alebo nasadenie.
+
+## Historické míľniky
 
 ## Sidebar height correction — 19 October
 

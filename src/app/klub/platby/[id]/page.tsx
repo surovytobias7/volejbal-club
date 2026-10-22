@@ -28,14 +28,16 @@ export default async function Charge({
   const { id } = await params;
   if (!z.uuid().safeParse(id).success) notFound();
   const v = await requireViewer();
+  if (!v.canFinance) notFound();
   const admin = v.roles.includes("admin");
-  const charge = one(
-    await v.db
-      .from("charges")
-      .select("*,profiles(full_name)")
-      .eq("id", id)
-      .single(),
-  );
+  const chargeResult = await v.db
+    .from("charges")
+    .select("*,profiles(full_name)")
+    .eq("id", id)
+    .maybeSingle();
+  if (chargeResult.error) throw new Error("Poplatok sa nepodarilo načítať.");
+  if (!chargeResult.data) notFound();
+  const charge = chargeResult.data;
   const search = await searchParams;
   const cursor = financeCursor(search, "payments");
   const adjustmentCursor = historyCursor({

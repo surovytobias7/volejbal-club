@@ -2,7 +2,7 @@
 
 **Verzia:** 1.2
 
-**Dátum:** 19. október 2026
+**Dátum:** 22. október 2026
 
 **Projekt:** `surovytobias7/volejbal-club`  
 **Pracovné prostredie:** T3 Code / Codex, Next.js, TypeScript, Supabase, GitHub  
@@ -10,6 +10,8 @@
 **Cieľ:** Spoľahlivý, bezpečný a vizuálne osobitý klubový systém pripravený približne pre 340 mesačne aktívnych používateľov.
 
 > **Zdroj stavu:** Reporty Codexa a doterajšia komunikácia. Tento dokument nie je nezávislý audit repozitára. Pred označením úloh ako hotových treba overiť skutočný kód, funkčnosť a aktuálne dokumenty projektu.
+
+**Aktuálne pokračovanie:** Reprodukovaných a opravených 9 bezpečnostných zlyhaní; 250 lokálnych testov prešlo. Doplnené serverové kontroly a databázové obmedzenia, aktualizovaná matica prístupov a navigácia podľa skutočných oprávnení. Dve nové migrácie čakajú na obnovenie prístupu k migračnej histórii testovacieho Supabase (Management HTTP 401); nový RPC kontrakt zatiaľ chýba na Data API. Pred nasadením aplikácie aplikovať iba overené chýbajúce migrácie a dokončiť hosted acceptance. Podrobnosti v `docs/PROGRESS.md`; staršie počty nižšie sú historické.
 
 ## Pravidlá práce
 

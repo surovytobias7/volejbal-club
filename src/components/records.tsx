@@ -47,11 +47,13 @@ export function MemberTable({
                   </span>
                   <div>
                     <strong>{p.full_name}</strong>
-                    <small>
-                      {p.user_id
-                        ? "Prepojený účet"
-                        : "Bez prihlasovacieho účtu"}
-                    </small>
+                    {p.account_linked !== null && (
+                      <small>
+                        {p.account_linked
+                          ? "Prepojený účet"
+                          : "Bez prihlasovacieho účtu"}
+                      </small>
+                    )}
                   </div>
                 </div>
               </td>

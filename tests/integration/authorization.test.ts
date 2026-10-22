@@ -101,52 +101,373 @@ afterAll(async () => {
 });
 
 describe("comprehensive access audit regressions", () => {
+  it.each(["admin", "coach", "parent", "child", "adult", "inactive"] as const)(
+    "returns a minimal current viewer context for %s",
+    async (role) => {
+      await as(ids[role]);
+      const result = (
+        await db.query<{ data: Record<string, unknown> | null }>(
+          "select public.viewer_context() as data",
+        )
+      ).rows[0].data;
+      if (role === "inactive") expect(result).toBeNull();
+      else {
+        expect(result).toMatchObject({
+          id: ids[role],
+          can_finance: ["admin", "parent", "adult"].includes(role),
+        });
+        expect(Object.keys(result!).sort()).toEqual([
+          "can_finance",
+          "id",
+          "name",
+          "roles",
+        ]);
+      }
+    },
+  );
+  it.each(["coach", "inactive"] as const)(
+    "denies private details to %s including null-viewer bypass",
+    async (role) => {
+      await as(ids[role]);
+      await expect(
+        db.query("select public.member_private_details($1)", [ids.child]),
+      ).rejects.toThrow();
+    },
+  );
+  it.each(["parent", "child", "admin"] as const)(
+    "retains authorized birth-date access without exposing Auth identifiers for %s",
+    async (role) => {
+      await as(ids[role]);
+      const { rows } = await db.query<{ data: Record<string, unknown> }>(
+        "select public.member_private_details($1) as data",
+        [ids.child],
+      );
+      expect(rows[0].data.birth_date).toBe("2012-01-01");
+      expect(rows[0].data.account_linked).toBe(role === "admin" ? true : null);
+      expect(rows[0].data).not.toHaveProperty("user_id");
+    },
+  );
+  it("does not permit Auth-ID predicates on otherwise readable profiles", async () => {
+    await as(ids.coach);
+    await expect(
+      db.query("select id from public.profiles where user_id=$1", [ids.child]),
+    ).rejects.toThrow();
+  });
+  it("keeps member administration out of personal directory RPCs", async () => {
+    for (const id of [ids.parent, ids.child]) {
+      await as(id);
+      const { rows } = await db.query<{
+        data: { items: unknown[]; total: number };
+      }>("select public.member_page(null,null,null) as data");
+      expect(rows[0].data).toMatchObject({ items: [], total: 0 });
+    }
+  });
+  it("masks account state for coaches but preserves administrator directory management", async () => {
+    for (const id of [ids.admin, ids.coach]) {
+      await as(id);
+      const { rows } = await db.query<{
+        data: { items: Record<string, unknown>[] };
+      }>("select public.member_page(null,null,null) as data");
+      expect(rows[0].data.items.length).toBeGreaterThan(0);
+      for (const item of rows[0].data.items) {
+        expect(item).not.toHaveProperty("user_id");
+        expect(item.account_linked).toBe(id === ids.admin ? true : null);
+      }
+    }
+  });
+  it("revokes guardian links even when an unrelated coach role remains", async () => {
+    await as(ids.admin);
+    await db.query("insert into public.user_roles values($1,'coach')", [
+      ids.parent,
+    ]);
+    await db.query(
+      "delete from public.user_roles where profile_id=$1 and role='guardian'",
+      [ids.parent],
+    );
+    await as(ids.parent);
+    expect(await count("guardian_players")).toBe(0);
+    expect(await count("charges")).toBe(0);
+    expect(await count("events")).toBe(0);
+    const { rows } = await db.query<{ data: { can_finance: boolean } }>(
+      "select public.viewer_context() as data",
+    );
+    expect(rows[0].data.can_finance).toBe(false);
+  });
+  it("cannot impersonate availability using administrator access alone", async () => {
+    await as(ids.admin);
+    await expect(
+      db.query(
+        "insert into public.availability(event_id,player_id,response) values($1,$2,'yes')",
+        [ids.event, ids.child],
+      ),
+    ).rejects.toThrow();
+  });
+  it("preserves independent availability and attendance, with database actor/time stamps on correction", async () => {
+    await as(ids.parent);
+    await db.query(
+      "insert into public.availability(event_id,player_id,response) values($1,$2,'no')",
+      [ids.event, ids.child],
+    );
+    await as(ids.coach);
+    await db.query(
+      "insert into public.attendance(event_id,player_id,status) values($1,$2,'present')",
+      [ids.event, ids.child],
+    );
+    const { rows } = await db.query<{ updated_by: string; trusted: boolean }>(
+      "update public.attendance set status='excused',updated_by=$1,updated_at='1900-01-01' returning updated_by,updated_at>'2020-01-01' as trusted",
+      [ids.parent],
+    );
+    expect(rows).toEqual([{ updated_by: ids.coach, trusted: true }]);
+    expect(
+      (
+        await db.query<{ response: string }>(
+          "select response from public.availability",
+        )
+      ).rows[0].response,
+    ).toBe("no");
+  });
+  it("still permits empty event transfer and ordinary edits to populated events", async () => {
+    await as(ids.admin);
+    await db.query("update public.events set team_id=$1 where id=$2", [
+      ids.team,
+      ids.otherEvent,
+    ]);
+    await db.query(
+      "insert into public.attendance(event_id,player_id,status) values($1,$2,'present')",
+      [ids.event, ids.child],
+    );
+    await db.query("update public.events set venue='Druhá hala' where id=$1", [
+      ids.event,
+    ]);
+    expect(
+      (
+        await db.query<{ venue: string }>(
+          "select venue from public.events where id=$1",
+          [ids.event],
+        )
+      ).rows[0].venue,
+    ).toBe("Druhá hala");
+  });
+  it("cannot transfer an event that only has planned availability", async () => {
+    await as(ids.child);
+    await db.query(
+      "insert into public.availability(event_id,player_id,response) values($1,$2,'yes')",
+      [ids.event, ids.child],
+    );
+    await as(ids.admin);
+    await expect(
+      db.query("update public.events set team_id=$1 where id=$2", [
+        ids.other,
+        ids.event,
+      ]),
+    ).rejects.toThrow();
+  });
+  it("masks named audiences on the page RPC while preserving manager editing and one audit record", async () => {
+    await as(ids.admin);
+    await db.query(
+      "insert into public.announcements(title,body,author_id,recipient_ids) values('Adresný oznam','Pokyny',$1,array[$2,$3]::uuid[])",
+      [ids.admin, ids.parent, ids.adult],
+    );
+    expect(
+      (
+        await db.query(
+          "select id from public.audit_logs where table_name='announcements'",
+        )
+      ).rows,
+    ).toHaveLength(1);
+    for (const id of [ids.admin, ids.parent, ids.child]) {
+      await as(id);
+      const { rows } = await db.query<{
+        data: { items: { recipient_ids: string[]; audience: string }[] };
+      }>("select public.announcement_page(null,false,null,null,null) as data");
+      if (id === ids.child) expect(rows[0].data.items).toEqual([]);
+      else
+        expect(rows[0].data.items[0]).toMatchObject({
+          audience: "people",
+          recipient_ids: id === ids.admin ? [ids.parent, ids.adult] : [],
+        });
+    }
+  });
+  it.each([
+    "profiles",
+    "member_details",
+    "teams",
+    "club_settings",
+    "fee_plans",
+  ])(
+    "denies unsupported destructive deletion of %s even for administrators",
+    async (table) => {
+      await as(ids.admin);
+      await expect(db.exec(`delete from public.${table}`)).rejects.toThrow();
+    },
+  );
+  it("requires an administrator for account linking", async () => {
+    await as(ids.child);
+    await expect(
+      db.query("select public.link_member_account($1,$2)", [
+        ids.child,
+        ids.adult,
+      ]),
+    ).rejects.toThrow();
+  });
+  it("stamps payment provenance and preserves its financial audit", async () => {
+    await as(ids.admin);
+    const { rows } = await db.query<{
+      id: string;
+      recorded_by: string;
+      trusted: boolean;
+    }>(
+      "insert into public.payments(charge_id,amount_cents,note,recorded_by,created_at) values($1,1000,'Fiktívna úhrada',$2,'1900-01-01') returning id,recorded_by,created_at>'2020-01-01' as trusted",
+      [ids.charge, ids.coach],
+    );
+    expect(rows[0]).toMatchObject({ recorded_by: ids.admin, trusted: true });
+    const audit = await db.query<{ actor_id: string; recorded_by: string }>(
+      "select actor_id,new_data->>'recorded_by' as recorded_by from public.audit_logs where table_name='payments' and record_id=$1",
+      [rows[0].id],
+    );
+    expect(audit.rows).toEqual([
+      { actor_id: ids.admin, recorded_by: ids.admin },
+    ]);
+  });
+  it("links only an active unlinked profile, without exposing the Auth ID", async () => {
+    await as(ids.admin);
+    const profile = (
+      await db.query<{ id: string }>(
+        "select public.create_member('Fiktívny člen',null,null,null,'player') as id",
+      )
+    ).rows[0].id;
+    await db.exec("reset role");
+    await db.query("insert into auth.users(id) values($1)", [uid(99)]);
+    await as(ids.admin);
+    await db.query("select public.link_member_account($1,$2)", [
+      profile,
+      uid(99),
+    ]);
+    expect(
+      (
+        await db.query<{ data: { account_linked: boolean } }>(
+          "select public.member_private_details($1) as data",
+          [profile],
+        )
+      ).rows[0].data.account_linked,
+    ).toBe(true);
+    await expect(
+      db.query("select public.link_member_account($1,$2)", [
+        profile,
+        ids.adult,
+      ]),
+    ).rejects.toThrow();
+  });
+  it("denies audit actor lookup outside administration", async () => {
+    await as(ids.coach);
+    await expect(
+      db.query("select public.audit_actor_names(array[$1]::uuid[])", [
+        ids.admin,
+      ]),
+    ).rejects.toThrow();
+  });
+  it("keeps the new public and private helpers inaccessible to anonymous callers", async () => {
+    const { rows } = await db.query<{ allowed: boolean }>(
+      "select has_function_privilege('anon',p.oid,'execute') as allowed from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname in ('public','private') and p.proname in ('viewer_context','member_private_details','member_account_linked','link_member_account','audit_actor_names','can_manage_announcement')",
+    );
+    expect(rows.length).toBeGreaterThan(10);
+    expect(rows.every((r) => !r.allowed)).toBe(true);
+  });
   it("cannot transfer an event with private player records to a new team", async () => {
     await as(ids.coach);
-    await db.query("insert into public.attendance(event_id,player_id,status) values($1,$2,'present')", [ids.event, ids.child]);
+    await db.query(
+      "insert into public.attendance(event_id,player_id,status) values($1,$2,'present')",
+      [ids.event, ids.child],
+    );
     await as(ids.admin);
-    await expect(db.query("update public.events set team_id=$1 where id=$2", [ids.other, ids.event])).rejects.toThrow();
+    await expect(
+      db.query("update public.events set team_id=$1 where id=$2", [
+        ids.other,
+        ids.event,
+      ]),
+    ).rejects.toThrow();
   });
   it("cannot transfer a training note to another team through its event", async () => {
     await as(ids.coach);
-    await db.query("insert into public.internal_notes(event_id,body) values($1,'Súkromný tréningový plán')", [ids.event]);
+    await db.query(
+      "insert into public.internal_notes(event_id,body) values($1,'Súkromný tréningový plán')",
+      [ids.event],
+    );
     await as(ids.admin);
-    await expect(db.query("update public.events set team_id=$1 where id=$2", [ids.other, ids.event])).rejects.toThrow();
+    await expect(
+      db.query("update public.events set team_id=$1 where id=$2", [
+        ids.other,
+        ids.event,
+      ]),
+    ).rejects.toThrow();
   });
   it("cannot move an availability response between linked children", async () => {
     await as(ids.parent);
-    await db.query("insert into public.availability(event_id,player_id,response) values($1,$2,'yes')", [ids.event, ids.child]);
-    await expect(db.query("update public.availability set player_id=$1 where event_id=$2 and player_id=$3", [ids.sibling, ids.event, ids.child])).rejects.toThrow();
+    await db.query(
+      "insert into public.availability(event_id,player_id,response) values($1,$2,'yes')",
+      [ids.event, ids.child],
+    );
+    await expect(
+      db.query(
+        "update public.availability set player_id=$1 where event_id=$2 and player_id=$3",
+        [ids.sibling, ids.event, ids.child],
+      ),
+    ).rejects.toThrow();
   });
   it("cannot move recorded attendance between roster players", async () => {
     await as(ids.coach);
-    await db.query("insert into public.attendance(event_id,player_id,status) values($1,$2,'present')", [ids.event, ids.child]);
-    await expect(db.query("update public.attendance set player_id=$1 where event_id=$2 and player_id=$3", [ids.sibling, ids.event, ids.child])).rejects.toThrow();
+    await db.query(
+      "insert into public.attendance(event_id,player_id,status) values($1,$2,'present')",
+      [ids.event, ids.child],
+    );
+    await expect(
+      db.query(
+        "update public.attendance set player_id=$1 where event_id=$2 and player_id=$3",
+        [ids.sibling, ids.event, ids.child],
+      ),
+    ).rejects.toThrow();
   });
   it("stamps availability time in the database instead of trusting a caller", async () => {
     await as(ids.parent);
-    const result = await db.query<{ trusted: boolean }>("insert into public.availability(event_id,player_id,response,updated_at) values($1,$2,'yes','1900-01-01') returning updated_at > '2020-01-01' as trusted", [ids.event, ids.child]);
+    const result = await db.query<{ trusted: boolean }>(
+      "insert into public.availability(event_id,player_id,response,updated_at) values($1,$2,'yes','1900-01-01') returning updated_at > '2020-01-01' as trusted",
+      [ids.event, ids.child],
+    );
     expect(result.rows[0].trusted).toBe(true);
   });
   it("denies private Auth identifiers even for an otherwise readable roster player", async () => {
     await as(ids.coach);
     expect(await count("profiles")).toBeGreaterThan(0);
-    await expect(db.query("select user_id from public.profiles where id=$1", [ids.child])).rejects.toThrow();
+    await expect(
+      db.query("select user_id from public.profiles where id=$1", [ids.child]),
+    ).rejects.toThrow();
   });
   it("denies direct birth-date selection to the generic API role", async () => {
     await as(ids.coach);
-    await expect(db.query("select birth_date from public.member_details where profile_id=$1", [ids.child])).rejects.toThrow();
+    await expect(
+      db.query(
+        "select birth_date from public.member_details where profile_id=$1",
+        [ids.child],
+      ),
+    ).rejects.toThrow();
   });
   it("does not disclose all named recipients to one recipient", async () => {
     await as(ids.admin);
-    await db.query("insert into public.announcements(title,body,author_id,recipient_ids) values('Adresné pokyny','Súkromné pokyny',$1,array[$2,$3]::uuid[])", [ids.admin,ids.parent,ids.adult]);
+    await db.query(
+      "insert into public.announcements(title,body,author_id,recipient_ids) values('Adresné pokyny','Súkromné pokyny',$1,array[$2,$3]::uuid[])",
+      [ids.admin, ids.parent, ids.adult],
+    );
     await as(ids.parent);
     expect(await count("announcements")).toBe(1);
-    await expect(db.query("select recipient_ids from public.announcements")).rejects.toThrow();
+    await expect(
+      db.query("select recipient_ids from public.announcements"),
+    ).rejects.toThrow();
   });
   it("closes club access when the last role is removed without refreshing a JWT", async () => {
     await as(ids.admin);
-    await db.query("delete from public.user_roles where profile_id=$1", [ids.parent]);
+    await db.query("delete from public.user_roles where profile_id=$1", [
+      ids.parent,
+    ]);
     await as(ids.parent);
     expect(await count("club_settings")).toBe(0);
     expect(await count("guardian_players")).toBe(0);
@@ -2074,7 +2395,7 @@ describe("PostgreSQL row-level authorization", () => {
     expect(
       (
         await db.query<{ birth_date: string }>(
-          "select birth_date::text from public.member_details",
+          "select public.member_private_details(private.viewer())->>'birth_date' as birth_date",
         )
       ).rows[0].birth_date,
     ).toBe("2012-01-01");

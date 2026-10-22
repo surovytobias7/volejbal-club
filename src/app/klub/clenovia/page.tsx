@@ -1,5 +1,7 @@
 import { MemberTable } from "@/components/records";
 import { requireViewer } from "@/lib/auth";
+import { notFound } from "next/navigation";
+import { canBrowseMembers } from "@/lib/access";
 import { one } from "@/lib/data";
 import { Pagination } from "@/components/pagination";
 import {
@@ -21,6 +23,7 @@ export default async function Members({
   searchParams: DirectorySearch;
 }) {
   const v = await requireViewer();
+  if (!canBrowseMembers(v.roles)) notFound();
   const admin = v.roles.includes("admin");
   const params = await searchParams;
   const q = directoryQuery(params);
@@ -40,8 +43,12 @@ export default async function Members({
   return (
     <>
       <PageHeading
-        title="Členovia klubu"
-        description="Hráči, tréneri a rodičia. Prepojení v jednom klube."
+        title={admin ? "Členovia klubu" : "Členovia mojich tímov"}
+        description={
+          admin
+            ? "Hráči, tréneri a rodičia. Prepojení v jednom klube."
+            : "Profily a kontakty členov tímov, ktoré vediete."
+        }
         action={
           admin && (
             <FormDialog
@@ -82,7 +89,13 @@ export default async function Members({
         {members.length ? (
           <MemberTable members={members} />
         ) : (
-          <Empty description="Vytvorte prvý členský profil alebo upravte vyhľadávanie." />
+          <Empty
+            description={
+              admin
+                ? "Vytvorte prvý členský profil alebo upravte vyhľadávanie."
+                : "Upravte vyhľadávanie. Členov do tímu priraďuje správca klubu."
+            }
+          />
         )}
         <Pagination
           firstHref={directoryHref("/klub/clenovia", filters)}

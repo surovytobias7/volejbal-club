@@ -1,3 +1,14 @@
+# Pokračovanie 22. 10. 2026
+
+- Obnovený stav má 20 lokálnych migrácií; dve nové opravy auditu sa na hosted databázu neaplikovali. Posledná historicky potvrdená aplikovaná verzia je `20261016090000` (18 migrácií, 18. október). Aktuálna história **nie je potvrdená**.
+- `npm run live:check`: 11 úspešných kontrol. Pred zmenou kontraktu runnera `npm run test:live`: 64 úspešných kontrol pôvodného Auth/PostgREST rozhrania. Zachované sanitizované dôkazy: `test-results/live-preflight.json`, `test-results/live-accounts-before-access.json`.
+- Aktualizovaný runner pre nový kontrakt: 26 úspešných a 5 blokovaných. Každá rola sa prihlási, ale `viewer_context` chýba (`PGRST202`); runner to označuje ako blokátor schémy, nie ako úspešný bezpečnostný test. Dôkaz: `test-results/live-accounts.json`.
+- Nový `npm run db:status`: Management HTTP 401. Priamy DB hostname sa nevyriešil (`ENOTFOUND`); TLS sa neobchádzalo. Dôkaz o stave histórie: `test-results/live-migrations.json`. Žiadny reset, seed ani vzdialený zápis klubových údajov.
+- Po súkromnom obnovení prístupu overiť presný usporiadaný prefix histórie. Aplikovať iba `20261022081940_access_integrity.sql`, potom `20261022081942_private_fields_and_access_context.sql`, zaznamenať históriu a obnoviť PostgREST schému. Nepoužiť `--include-seed` ani opakovanie už aplikovaných migrácií. Nasadenie aplikácie závisí od oboch migrácií.
+- Nasleduje nové `npm run test:live`, priame negatívne API prípady z matice, hosted notes acceptance a autentifikované desktop/mobile mutácie. Súbeh presunu udalosti s novým súkromným záznamom overiť v dvoch nezávislých reláciách; PGlite pokrýva sériovú integritu, nie tento hosted súbeh.
+
+Nasleduje historický runbook a staršie dôkazy.
+
 # M4 - live integration execution
 
 This file records the live phase. The existing [LIVE_ACCEPTANCE.md](LIVE_ACCEPTANCE.md) contains the full workflow matrix. No M4 file existed in this checkout when this phase began; this entry point now makes the requested milestone explicit.

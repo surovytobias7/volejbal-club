@@ -12,6 +12,7 @@ import { mutate } from "@/features/actions";
 import { memberFields, roleOptions, formValues } from "@/features/fields";
 import { InternalNotes } from "@/features/internal-notes";
 import type { NotesSearch } from "@/lib/notes";
+import { memberPrivateDetailsSchema } from "@/lib/access";
 export default async function Member({
   params,
   searchParams,
@@ -25,9 +26,16 @@ export default async function Member({
   const search = await searchParams;
   if (!v.roles.includes("admin"))
     return <MemberProfile id={id} search={search} />;
-  const p = one(await v.db.from("profiles").select("*").eq("id", id).single());
-  const details = one(
-    await v.db.from("member_details").select("*").eq("profile_id", id).single(),
+  const profile = await v.db
+    .from("profiles")
+    .select("id,full_name,active")
+    .eq("id", id)
+    .maybeSingle();
+  if (profile.error) throw new Error("Profil sa nepodarilo načítať.");
+  if (!profile.data) notFound();
+  const p = profile.data;
+  const details = memberPrivateDetailsSchema.parse(
+    one(await v.db.rpc("member_private_details", { p_id: id })),
   );
   const roles = rows(
     await v.db.from("user_roles").select("role").eq("profile_id", id),
@@ -169,11 +177,11 @@ export default async function Member({
           <Panel title="Prihlasovací účet">
             <div className="panel-body">
               <p className="muted">
-                {p.user_id
+                {details.account_linked
                   ? "Tento profil je prepojený s účtom."
                   : "Pozvánka sa odošle na e-mail uložený v profile."}
               </p>
-              {!p.user_id && p.active && (
+              {!details.account_linked && p.active && (
                 <ActionForm
                   action={mutate}
                   hidden={{ command: "invite", id }}

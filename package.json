@@ -13,7 +13,8 @@
     "test:live": "node --use-system-ca scripts/live-check.mjs --accounts",
     "check": "npm run typecheck && npm run lint",
     "format": "prettier --write src tests docs *.ts *.json *.md",
-    "db:types": "node scripts/generate-db-types.mjs"
+    "db:types": "node scripts/generate-db-types.mjs",
+    "db:status": "node --use-system-ca scripts/live-migration-status.mjs"
   },
   "dependencies": {
     "@fontsource-variable/manrope": "5.3.0",

@@ -131,7 +131,7 @@ export default async function Announcements({
               <div className="panel-body">
                 <div className="event-meta">
                   <span className="badge">
-                    {a.recipient_ids.length
+                    {a.audience === "people"
                       ? "Konkrétni členovia"
                       : a.team_id || a.extra_team_ids.length
                         ? `Vybrané tímy (${a.extra_team_ids.length + (a.team_id ? 1 : 0)})`
