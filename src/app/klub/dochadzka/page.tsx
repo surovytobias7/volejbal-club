@@ -1,4 +1,5 @@
 import { AttendanceTable } from "@/components/records";
+import { AttendanceSessions } from "@/features/attendance-sessions";
 import Link from "next/link";
 import { z } from "zod";
 import { requireViewer } from "@/lib/auth";
@@ -53,6 +54,7 @@ export default async function Attendance({
         title="Dochádzka"
         description="Skutočná účasť zaznamenaná trénerom. Potvrdenie účasti sa do štatistiky nezapočítava."
       />
+      <AttendanceSessions />
       <form className="toolbar">
         {player && <input type="hidden" name="player" value={player} />}
         <label className="field">
@@ -70,6 +72,7 @@ export default async function Attendance({
             <option value="">Všetky stavy</option>
             <option value="present">Prítomný</option>
             <option value="absent">Neprítomný</option>
+            <option value="late">Meškanie</option>
             <option value="excused">Ospravedlnený</option>
           </select>
         </label>
@@ -83,7 +86,7 @@ export default async function Attendance({
           <span className="muted">Zaznamenaná účasť</span>
           <strong>
             {page.total
-              ? `${Math.round((page.present / page.total) * 100)} %`
+              ? `${Math.round(((page.present + page.late) / page.total) * 100)} %`
               : "—"}
           </strong>
           <small>Všetky záznamy podľa filtrov ({page.total})</small>
@@ -91,7 +94,7 @@ export default async function Attendance({
         <div className="stat">
           <span className="muted">Prítomní</span>
           <strong>{page.present}</strong>
-          <small>Potvrdené trénerom</small>
+          <small>Okrem toho s meškaním: {page.late}</small>
         </div>
         <div className="stat">
           <span className="muted">Neprítomní</span>

@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { AttendanceSessions } from "@/features/attendance-sessions";
 import Link from "next/link";
 import { Pagination } from "@/components/pagination";
 import { Button } from "@/components/ui/button";
@@ -91,6 +92,7 @@ export default async function Team({
       />
       <div className="two-columns">
         <div className="stack">
+          <AttendanceSessions teamId={id} />
           <Panel title="Najbližší program">
             <EventList events={events} />
           </Panel>

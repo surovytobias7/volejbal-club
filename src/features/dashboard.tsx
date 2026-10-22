@@ -105,6 +105,14 @@ export function Dashboard({
           <Link className="text-link" href={calendarHref}>
             <CalendarDays size={17} aria-hidden /> Otvoriť kalendár
           </Link>
+          {data.roles.some((role) => role === "coach" || role === "admin") && (
+            <Link
+              className="text-link"
+              href={preview ? "/ukazka?view=udalost" : "/klub/dochadzka"}
+            >
+              Zapísať dochádzku
+            </Link>
+          )}
         </div>
         {nextEvent ? (
           <Link

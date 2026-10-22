@@ -1,53 +1,31 @@
 // Read-only history inspection. Never applies migrations or prints connection data.
 import { existsSync } from "node:fs";
-import { readdir, mkdir, writeFile } from "node:fs/promises";
-import { config, management } from "./live-runtime.mjs";
+import { readdir, readFile, mkdir, writeFile } from "node:fs/promises";
+import nextEnv from "@next/env";
+import {
+  inspectMigrationHistory,
+  migrationReasons,
+} from "./migration-support.mjs";
 
+// Preserve the established environment precedence; never print loaded values.
+nextEnv.loadEnvConfig(process.cwd(), false, { info() {}, error() {} });
 if (existsSync(".env.live.local")) process.loadEnvFile(".env.live.local");
 const local = (await readdir("supabase/migrations"))
-  .filter((name) => /^\d{14}_.+\.sql$/.test(name))
+  .filter((name) => name.endsWith(".sql"))
   .sort();
 const report = {
   at: new Date().toISOString(),
   scope: "read-only-migration-history",
   local,
-  status: "blocked",
+  ...(await inspectMigrationHistory({
+    env: process.env,
+    local,
+    linkedRef: existsSync("supabase/.temp/project-ref")
+      ? (await readFile("supabase/.temp/project-ref", "utf8")).trim()
+      : null,
+  })),
 };
-try {
-  if (config.url !== process.env.LIVE_TEST_PROJECT_URL) {
-    report.reason = "Testovací projekt nie je výslovne potvrdený.";
-  } else {
-    const rows = await management("database/query", {
-      query:
-        "select version from supabase_migrations.schema_migrations order by version",
-      read_only: true,
-    });
-    if (
-      !Array.isArray(rows) ||
-      rows.some((row) => !/^\d{14}$/.test(row.version))
-    ) {
-      report.reason = "Migračná história nemá očakávaný formát.";
-    } else {
-      const applied = rows.map((row) => row.version);
-      report.applied = applied;
-      report.pending = local.filter(
-        (name) => !applied.includes(name.slice(0, 14)),
-      );
-      report.unknown = applied.filter(
-        (version) => !local.some((name) => name.startsWith(version + "_")),
-      );
-      report.outOfOrder = report.pending.some((name) =>
-        applied.some((version) => version > name.slice(0, 14)),
-      );
-      report.status =
-        report.unknown.length || report.outOfOrder ? "review" : "verified";
-    }
-  }
-} catch (error) {
-  report.reason = /^Management HTTP \d{3}$/.test(error.message)
-    ? error.message
-    : "Históriu sa nepodarilo načítať; pripojenie nie je overené.";
-}
+if (report.code) report.reason = migrationReasons[report.code];
 await mkdir("test-results", { recursive: true });
 await writeFile(
   "test-results/live-migrations.json",

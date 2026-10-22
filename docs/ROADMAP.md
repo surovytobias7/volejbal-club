@@ -2,7 +2,17 @@
 
 Updated: 2026-10-22. It records the current implementation and redesign; it does not replace the live acceptance gates in M4_LIVE_ACCEPTANCE.md. PRODUCT.md and DESIGN.md hold the confirmed usage context and design rules.
 
+Latest integration: resolved restored attendance/security conflicts, retained private viewer context, retired unversioned attendance writes and reconciled historical attendance correction guards. **296/296 local tests pass**, check and build pass on patched Next.js 16.4.2. Production dependency audit is clean; five development-only ESLint/braces findings remain. There are 22 local migrations and 27 RPCs. Four migrations above the historical 18-migration hosted baseline need confirmed remote history and ordered application; read-only inspection still returns Management HTTP 401. Next: hosted attendance/notes acceptance after restoring history access, and track the upstream development dependency fix. Earlier milestone counts below are historical.
+
 22 October continuation: completed the nine reproduced authorization defects, explicit mutation guards, personal-role directory denial and finance eligibility navigation. The local suite now passes 250 tests. Two reviewed local migrations require a renewed Management connection/history inspection before applying to the dedicated test database. `npm run db:status` is read-only; no remote migration was applied. The app's new `viewer_context` dependency must be migrated before deployment. Current evidence and next steps are in PROGRESS.md and ACCESS_CONTROL_MATRIX.md; historical counts below remain milestone context.
+## Dochádzka trénera — aktuálny míľnik
+
+- [x] Integrovaný mobilný súpis na existujúcom detaile, štyri priame stavy, neoznačení hráči, počty, vyhľadávanie, celý tím prítomný a vrátenie, dôvod, spoločné uloženie a opravy.
+- [x] Serverové overenie tímu a aktuálnych rolí, RLS, atomická dávka, audit, verzie/konflikty, opakovanie požiadavky, zrušený tréning a historické záznamy po zmene členstva. Oddelená plánovaná dostupnosť.
+- [x] Lokálne cielené PGlite/jednotkové testy a T3 interakcie pri desktopových/mobilných rozmeroch; detaily v [ATTENDANCE.md](ATTENDANCE.md).
+- [ ] Aplikovať novú migráciu do vyhradeného testovacieho Supabase a overiť reálny Auth/PostgREST, obnovenie stránky po uložení, všetky roly a súbežné spojenia.
+- [ ] Dokončiť snímkovú vizuálnu kontrolu po odstránení chyby T3 `preview_snapshot`, čítačku obrazovky a fyzický mobil.
+- [x] Opraviť tri regresie súkromných polí a overiť ich spolu s dochádzkou; aktuálny integrovaný výsledok je v PROGRESS.md.
 
 ## Design direction
 

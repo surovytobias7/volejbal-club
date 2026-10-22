@@ -15,6 +15,7 @@ import { CalendarView } from "@/features/calendar";
 import { MemberProfileView } from "@/components/member-profile-view";
 import { EventBrief } from "@/components/event-brief";
 import { DesignPreviewNotes } from "@/features/design-preview-notes";
+import { DesignPreviewAttendance } from "@/features/design-preview-attendance";
 import { clubBrand } from "@/lib/club-brand";
 export const dynamic = "force-dynamic";
 export default async function Preview({
@@ -329,6 +330,7 @@ export default async function Preview({
             description={fixture.teams[previewEvent.team_id]}
           />
           <EventBrief
+            compact={previewEvent.kind === "training"}
             event={{
               ...previewEvent,
               home: true,
@@ -336,7 +338,8 @@ export default async function Preview({
                 "Príďte 15 minút pred začiatkom. Prineste si športovú obuv a fľašu vody.",
             }}
           />
-          <Panel title="Účasť na udalosti" plain>
+          <DesignPreviewAttendance />
+          <Panel title="Plánovaná účasť" plain>
             <div className="panel-body">
               <p className="muted">
                 Toto je ukážková udalosť. Potvrdenie účasti a evidencia

@@ -1,5 +1,21 @@
 # Progress - 2026-10-22
 
+## Integrácia dochádzky a bezpečnostného auditu — 22. október
+
+- Zachovaná vetva `feature/authenticated-workflow-acceptance` aj pripravené zmeny vrátane nesúvisiaceho súboru používateľa. Odstránené doslovné konfliktné značky v šiestich súboroch; bezpečný `viewer_context` zostáva zdrojom aktuálnych rolí a finančných oprávnení. Starý serverový príkaz dochádzky bez verzie je odmietnutý; zápis používa existujúci `saveAttendance` a atomický RPC.
+- Reprodukovaný spoločný základ: 290 úspešných / 3 zlyhania. Dve zlyhania boli testy odstráneného príkazu; tretie odhalilo konflikt databázových triggerov pri oprave histórie po odchode hráča. Testy starého príkazu teraz overujú jeho odmietnutie; kontrola odmietnutia po zmene oprávnení zostáva aj na novom RPC a dostupnosti.
+- Nová nedestruktívna migrácia `20261022184845_reconcile_attendance_access.sql` zjednocuje triggery bez zmeny historických migrácií či záznamov. Historické opravy sú možné len aktuálnemu správcovi udalosti; nové zápisy vyžadujú oprávneného aktívneho člena. Identita, autor, čas, verzia, zámok udalosti a zákaz zápisu do zrušeného tréningu zostávajú v databáze. Duplicitné ochranné triggery sú odstránené, audit zostáva.
+- Regresie rozšírené o odobratie hráčskej roly, deaktiváciu a následné odobratie trénerstva. Integrovaná sada prešla **296/296 testov v 17 súboroch**. Typy obsahujú 19 tabuliek a 27 RPC; lokálne je 22 migrácií.
+- Read-only `npm run db:status` opäť skončil **Management HTTP 401**. Žiadna migrácia ani klubový záznam nebol vzdialene zmenený. Aktuálna vzdialená história nie je potvrdená; historický základ je 18 migrácií. Štyri lokálne migrácie nad týmto základom: `20261021201352`, `20261022081940`, `20261022081942`, `20261022184845`, presne v tomto poradí. Pred aplikovaním treba znovu overiť vzdialenú históriu; žiadny reset/seed.
+- Build upozornil na zraniteľnosti Next.js 16.4.0; `npm audit` ich nezávisle potvrdil (GHSA-2464-fhr4-w9xw, GHSA-p3m5-59mp-jv5r, GHSA-673q-mjm6-r5xr). Next.js aj eslint-config-next sú aktualizované na **16.4.2**, lockfile zachovaný a aktualizovaný npm. Prvý audit potreboval systémový CA store; TLS overovanie nebolo vypnuté.
+- Záverečné kontroly po aktualizácii: **`npm run check` prešlo**, **`npm test -- --reporter=dot`: 296/296, 17 súborov**, **`npm run build` prešlo** bez pôvodného bezpečnostného zastavenia. **`npm audit --omit=dev`: 0 zraniteľností**. Úplný audit má 5 high hlásení v jednom vývojovom reťazci `eslint-config-next → @next/eslint-plugin-next → fast-glob → micromatch → braces` (GHSA-vfj7-8cjw-p6xm). Npm navrhuje nekompatibilný downgrade na 14.2.35; nebol vykonaný. Zostáva pôvodné konfiguračné upozornenie Vitest na CommonJS/ESM.
+- T3 nad aktuálnou produkčnou zostavou s explicitným fiktívnym náhľadom: 20 neoznačených hráčok, hromadné označenie, individuálne meškanie a potvrdené uloženie v pamäti (19 prítomných, 1 meškanie). DOM bez vodorovného pretekania na 1280 × 800, 320 × 740 a 390 × 844; stavové tlačidlá pri 320 px majú výšku aspoň 74 px. `preview_snapshot` stále vracia `PreviewAutomationExecutionError`; snímková kontrola nie je potvrdená. Náhľad na porte 3000 ostáva spustený. Skutočné uloženie cez Auth/PostgREST a paralelné spojenia toto overenie nenahrádza.
+- Pracovné súbory už nemajú konfliktné značky a `git diff --check` prešlo. Index nebol menený automatickým stagingom: pred budúcim commitom treba pripraviť vyriešené pracovné verzie, nie commitnúť starý obsah indexu. Žiadny commit, push, merge, vzdialená migrácia ani nasadenie.
+
+Ďalší krok: obnoviť prístup k migračnej histórii vyhradeného Supabase, potvrdiť predchodcov, aplikovať štyri chýbajúce migrácie v poradí a vykonať hosted attendance/notes acceptance vrátane súbehu, revokácie a obnovenia stránky. Samostatne sledovať opravu vývojovej závislosti `braces`; neznižovať Next.js/ESLint na nekompatibilnú hlavnú verziu.
+
+Nasledujúce staršie výsledky sú historické. Tri pôvodné chyby súkromných polí už opravuje zachovaný bezpečnostný audit; nie sú aktuálnymi zlyhaniami.
+
 ## Pokračovanie auditu oprávnení — 22. október
 
 - Obnovený skutočný stav: vetva `feature/authenticated-workflow-acceptance`, commit `99e375d`, čistý pracovný strom. Rozpracované zmeny boli už v commite. Prvý beh mal **169 úspešných a 9 zlyhávajúcich testov (178 spolu)**, nie hlásených 218/3. Všetkých deväť zlyhaní boli reprodukované bezpečnostné chyby v už pridanom audite; žiadny test nebol vypnutý.
@@ -27,6 +43,18 @@
 Graphify bol použitý bez obnovy grafu; zdroje skontrolované priamo, pretože graf predchádza auditu. Žiadny skorší klubový repozitár ani agent nebol použitý. Supabase skill/konektor v tejto relácii nebol dostupný; overené boli oficiálne dokumenty RLS/column grants a existujúce lokálne nástroje. Použité React, frontend-design a Impeccable pravidlá; branding a logo zachované. Žiadny commit, push, merge alebo nasadenie.
 
 ## Historické míľniky
+### Historical attendance verification - 2026-10-21
+
+## Trénerova dochádzka — 21. október
+
+- Existujúci detail udalosti má nový mobilný súpis so štyrmi priamymi stavmi, neoznačeným východiskovým stavom, počtami, vyhľadávaním, filtrom neoznačených, označením celého tímu a spoločným uložením. Doplnili sa priame vstupy z dochádzky, tímu a trénerovho prehľadu; kalendár používa rovnaký detail. Plánované odpovede zostávajú oddelené. Stručný kontext tréningu zachováva dátum/čas, miesto, tím a dostupné pokyny bez veľkého úvodného bloku.
+- Jedna nová lokálna migrácia rozširuje existujúcu tabuľku a RPC: meškanie, dôvod, verzie, atomická dávka, kontrola konfliktov, bezpečné opakovanie, databázový autor/čas a audit. Zachováva historické záznamy po zmene členstva, blokuje zrušené udalosti a presun udalosti so súkromnými záznamami do iného tímu. RLS a server kontrolujú aktuálne roly/pridelenia; odobratie poslednej roly aj deaktivácia účinkujú bez obnovy JWT.
+- Východiskové testy pred zmenami: **169 prešlo, 9 zlyhalo**. Opravených je šesť súvisiacich regresií. Tri pôvodné zlyhania mimo pracovného postupu dochádzky zostávajú: priame čítanie Auth identifikátora profilu, dátumu narodenia a zoznamu adresátov oznamu. Testy ostali zachované; úplný zelený výsledok sa netvrdí.
+- T3 náhľad s 20 fiktívnymi hráčkami: označenie, hromadná akcia a vrátenie, výnimky, dôvod, uloženie a znovuotvorenie, filtrovanie, zachovanie zmien pri chybe, konflikt a zrušenie overené. DOM rozmery na **1280 × 800, 390 × 844 a 320 × 740** bez vodorovného pretekania; stavové tlačidlá na mobile minimálne 60 px vysoké. `preview_snapshot` na detaile opakovane zlyháva, ostatné T3 nástroje fungujú; vizuálne screenshotové schválenie nie je potvrdené.
+- Záverečné overenie: **`npm run check` prešlo** (TypeScript + ESLint); **`npm test`: 218 prešlo / 3 pôvodné zlyhania, spolu 221 testov v 15 súboroch**. Všetkých **43 nových testov** prešlo. **`npm run build` prešlo**. `git diff --check` bez chýb bielych znakov. Zostáva pôvodné upozornenie Vitest na ESM/CommonJS konfiguráciu.
+- Produkčné zostavenie spustené lokálne na porte 3001: explicitný náhľad sa načíta s 20 neoznačenými hráčmi, na 320 px bez vodorovného pretekania. Živá databáza sa pri tejto kontrole nepoužíva. T3 snímkovanie zlyháva aj v produkčnom náhľade.
+- **Živý Supabase:** nová migrácia nebola aplikovaná vzdialene; nové Auth/PostgREST, prehliadačové ukladanie do Supabase a skutočná paralelnosť spojení neboli overené. PGlite ani explicitný pamäťový náhľad ich nenahrádzajú. Podrobnosti a hranice: [ATTENDANCE.md](ATTENDANCE.md).
+- Bez commitu, pushu, merge alebo nasadenia. Práca prebehla v hlavnej relácii, bez agentov a bez kontroly staršieho klubového repozitára. Použitý existujúci Graphify na navigáciu; starší graf nebol regenerovaný.
 
 ## Sidebar height correction — 19 October
 

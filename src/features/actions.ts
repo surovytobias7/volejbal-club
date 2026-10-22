@@ -336,18 +336,6 @@ export async function mutate(_: FormState, form: FormData): Promise<FormState> {
         check(await db.from("availability").upsert(p));
         break;
       }
-      case "attendance": {
-        const p = z
-          .object({
-            event_id: uuid,
-            player_id: uuid,
-            status: z.enum(["present", "absent", "excused"]),
-          })
-          .parse(data);
-        await requireParticipation(viewer, p.event_id, p.player_id, true);
-        check(await db.from("attendance").upsert(p));
-        break;
-      }
       case "announcement": {
         const p = z
           .object({

@@ -178,14 +178,10 @@ describe("server mutation authorization with an otherwise permissive database mo
     expect((await run("event", { team_id: id(21) })).error).toBeTruthy();
     expect(writes).toEqual([]);
   });
-  it("records actual attendance only, leaving actor and time to the database", async () => {
-    expect((await run("attendance")).success).toBeTruthy();
-    expect(writes).toEqual([
-      {
-        table: "attendance",
-        value: { event_id: id(30), player_id: id(4), status: "present" },
-      },
-    ]);
+  it("rejects the retired unversioned attendance command even for an assigned coach", async () => {
+    expect((await run("attendance")).error).toBeTruthy();
+    expect(writes).toEqual([]);
+    expect(db.rpc).not.toHaveBeenCalled();
   });
   it.each(["admin", "coach"] as const)(
     "does not grant availability impersonation to %s",
@@ -228,15 +224,17 @@ describe("server mutation authorization with an otherwise permissive database mo
       currentPlayer = reason !== "no-player-role";
       cancelled = reason === "cancelled";
       queryError = reason === "database-error";
-      const result = await run("attendance");
+      viewer(["player"], id(4));
+      const result = await run("availability");
       expect(result.error).toBeTruthy();
       expect(result.error).not.toContain("Private database");
       expect(writes).toEqual([]);
     },
   );
   it("does not report success after RLS rejects a race at mutation time", async () => {
+    viewer(["player"], id(4));
     writeError = true;
-    expect((await run("attendance")).error).toBeTruthy();
+    expect((await run("availability")).error).toBeTruthy();
     expect(writes).toHaveLength(1);
   });
   it("requires management of every requested announcement team", async () => {

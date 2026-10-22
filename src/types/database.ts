@@ -70,23 +70,29 @@ export type Database = {
         Row: {
           event_id: string;
           player_id: string;
-          status: string;
+          status: string | null;
           updated_by: string;
           updated_at: string;
+          reason: string;
+          version: number;
         };
         Insert: {
           event_id: string;
           player_id: string;
-          status: string;
+          status?: string | null;
           updated_by?: string;
           updated_at?: string;
+          reason?: string;
+          version?: number;
         };
         Update: {
           event_id?: string;
           player_id?: string;
-          status?: string;
+          status?: string | null;
           updated_by?: string;
           updated_at?: string;
+          reason?: string;
+          version?: number;
         };
         Relationships: [
           {
@@ -938,6 +944,10 @@ export type Database = {
         Returns: Json;
       };
       refresh_my_reminders: { Args: Record<string, never>; Returns: number };
+      save_attendance: {
+        Args: { p_event: string | null; p_changes: Json | null };
+        Returns: Json;
+      };
       selector_options: {
         Args: {
           p_kind: string | null;

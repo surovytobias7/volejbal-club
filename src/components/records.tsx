@@ -5,6 +5,7 @@ import type { chargePageSchema, financeSummarySchema } from "@/lib/finance";
 import type { attendancePageSchema } from "@/lib/activity";
 import { roleNames } from "@/lib/auth";
 import { money, dateTime } from "@/lib/utils";
+import { attendanceLabels } from "@/lib/attendance";
 
 export function MemberTable({
   members,
@@ -254,13 +255,7 @@ export function AttendanceTable({
                 <span
                   className={`badge ${r.status === "present" ? "success" : r.status === "absent" ? "danger" : ""}`}
                 >
-                  {
-                    {
-                      present: "Prítomný",
-                      absent: "Neprítomný",
-                      excused: "Ospravedlnený",
-                    }[r.status]
-                  }
+                  {attendanceLabels[r.status]}
                 </span>
               </td>
             </tr>

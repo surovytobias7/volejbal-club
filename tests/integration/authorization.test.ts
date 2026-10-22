@@ -1,4 +1,8 @@
 import { PGlite } from "@electric-sql/pglite";
+import {
+  savedAttendanceSchema,
+  type AttendanceInput,
+} from "../../src/lib/attendance";
 import { notesPageSchema } from "../../src/lib/notes";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -471,6 +475,362 @@ describe("comprehensive access audit regressions", () => {
     await as(ids.parent);
     expect(await count("club_settings")).toBe(0);
     expect(await count("guardian_players")).toBe(0);
+  });
+});
+
+describe("coach attendance workflow", () => {
+  const change = (
+    player_id = ids.child,
+    status: AttendanceInput["changes"][number]["status"] = "present",
+    expected_version = 0,
+    reason = "",
+  ) => ({ player_id, status, expected_version, reason });
+  async function save(changes = [change()], event = ids.event) {
+    return savedAttendanceSchema.parse(
+      (
+        await db.query<{ data: unknown }>(
+          "select public.save_attendance($1,$2::jsonb) as data",
+          [event, JSON.stringify(changes)],
+        )
+      ).rows[0].data,
+    );
+  }
+  async function roster(event = ids.event) {
+    return eventRosterSchema.parse(
+      (
+        await db.query<{ data: unknown }>(
+          "select public.event_roster_page($1,'',null,null) as data",
+          [event],
+        )
+      ).rows[0].data,
+    );
+  }
+  async function history() {
+    return attendancePageSchema.parse(
+      (
+        await db.query<{ data: unknown }>(
+          "select public.attendance_page('',null,null,null,null,null) as data",
+        )
+      ).rows[0].data,
+    );
+  }
+  it("starts unmarked, saves a batch, persists on roster reread and keeps availability separate", async () => {
+    await as(ids.parent);
+    await db.query(
+      "insert into public.availability(event_id,player_id,response,reason) values($1,$2,'yes',''),($1,$3,'no','Rodinný program')",
+      [ids.event, ids.child, ids.sibling],
+    );
+    await as(ids.coach);
+    expect(
+      (await roster()).items.every(
+        (p) => p.attendance === null && p.attendance_version === 0,
+      ),
+    ).toBe(true);
+    const result = await save([
+      change(ids.child, "absent"),
+      change(ids.sibling, "present"),
+    ]);
+    expect(result).toHaveLength(2);
+    expect(result.every((r) => r.version === 1)).toBe(true);
+    const reread = (await roster()).items;
+    expect(reread.find((p) => p.profile_id === ids.child)).toMatchObject({
+      attendance: "absent",
+      availability: { response: "yes" },
+    });
+    expect(reread.find((p) => p.profile_id === ids.sibling)).toMatchObject({
+      attendance: "present",
+      availability: { response: "no", reason: "Rodinný program" },
+    });
+    expect(await count("attendance")).toBe(2);
+  });
+  it("does not create absences for players omitted from a partial save", async () => {
+    await as(ids.coach);
+    await save();
+    expect(
+      (await roster()).items.find((p) => p.profile_id === ids.sibling)
+        ?.attendance_version,
+    ).toBe(0);
+    expect((await history()).total).toBe(1);
+  });
+  it("audits corrections, authentic actor and database time, and excludes an unmarked correction from statistics", async () => {
+    await as(ids.coach);
+    await save();
+    await save([change(ids.child, "excused", 1, "Rodinný program")]);
+    await save([change(ids.child, null, 2)]);
+    expect(
+      (await roster()).items.find((p) => p.profile_id === ids.child),
+    ).toMatchObject({
+      attendance: null,
+      attendance_version: 3,
+      attendance_reason: "",
+    });
+    expect((await history()).total).toBe(0);
+    await as(ids.admin);
+    const audit = await db.query<{
+      actor_id: string;
+      old_data: { status: string };
+      new_data: { status: null; version: number };
+    }>(
+      "select actor_id,old_data,new_data from public.audit_logs where table_name='attendance' and new_data->>'version'='3'",
+    );
+    expect(audit.rows[0]).toMatchObject({
+      actor_id: ids.coach,
+      old_data: { status: "excused" },
+      new_data: { status: null, version: 3 },
+    });
+    await db.query(
+      "update public.attendance set status='late',updated_by=$1,updated_at='1900-01-01',version=800 where event_id=$2",
+      [ids.coach, ids.event],
+    );
+    const record = (
+      await db.query<{ updated_by: string; version: number; stamped: boolean }>(
+        "select updated_by,version,updated_at>'2020-01-01' as stamped from public.attendance",
+      )
+    ).rows[0];
+    expect(record).toEqual({
+      updated_by: ids.admin,
+      version: 4,
+      stamped: true,
+    });
+  });
+  it("treats late as attended in dashboard/family statistics while keeping a separate history count", async () => {
+    await as(ids.coach);
+    await save([change(ids.child, "late")]);
+    expect(await history()).toMatchObject({ total: 1, present: 0, late: 1 });
+    const summary = (
+      await db.query<{ data: { participation: number } }>(
+        "select public.dashboard_summary(now()) as data",
+      )
+    ).rows[0].data;
+    expect(summary.participation).toBe(100);
+    await as(ids.parent);
+    const family = guardianDashboardSchema.parse(
+      (
+        await db.query<{ data: unknown }>(
+          "select public.guardian_dashboard(now(),null) as data",
+        )
+      ).rows[0].data,
+    );
+    expect(family.items.find((p) => p.id === ids.child)?.attendance).toEqual({
+      recorded: 1,
+      present: 1,
+    });
+  });
+  it("rejects a stale correction and rolls back the entire batch", async () => {
+    await as(ids.coach);
+    await save([change(ids.child), change(ids.sibling)]);
+    await save([change(ids.sibling, "late", 1)]);
+    await db.exec("savepoint stale_save");
+    await expect(
+      save([change(ids.child, "absent", 1), change(ids.sibling, "absent", 1)]),
+    ).rejects.toMatchObject({ code: "40001" });
+    await db.exec("rollback to savepoint stale_save");
+    const page = await roster();
+    expect(page.items.find((p) => p.profile_id === ids.child)?.attendance).toBe(
+      "present",
+    );
+    expect(
+      page.items.find((p) => p.profile_id === ids.sibling)?.attendance,
+    ).toBe("late");
+  });
+  it("safely retries an acknowledged-lost batch without duplicate records or audit updates", async () => {
+    await as(ids.coach);
+    const first = await save();
+    expect(await save()).toEqual(first);
+    expect(await count("attendance")).toBe(1);
+    await as(ids.admin);
+    expect(
+      Number(
+        (
+          await db.query<{ n: number }>(
+            "select count(*) as n from public.audit_logs where table_name='attendance'",
+          )
+        ).rows[0].n,
+      ),
+    ).toBe(1);
+  });
+  it.each(["child", "parent", "stranger", "inactive"] as const)(
+    "denies actual attendance writes by %s",
+    async (role) => {
+      await as(ids[role]);
+      await expect(save()).rejects.toMatchObject({ code: "42501" });
+    },
+  );
+  it("denies a coach's unassigned session even with a second guardian role", async () => {
+    await as(ids.admin);
+    await db.query("insert into public.user_roles values($1,'guardian')", [
+      ids.coach,
+    ]);
+    await db.query("insert into public.guardian_players values($1,$2)", [
+      ids.coach,
+      ids.stranger,
+    ]);
+    await as(ids.coach);
+    expect((await roster(ids.otherEvent)).can_manage).toBe(false);
+    await expect(
+      save([change(ids.stranger)], ids.otherEvent),
+    ).rejects.toMatchObject({ code: "42501" });
+  });
+  it("lets the administrator manage another team", async () => {
+    await as(ids.admin);
+    expect(await save([change(ids.stranger)], ids.otherEvent)).toHaveLength(1);
+  });
+  it.each(["child", "parent"] as const)(
+    "prevents direct Data API corrections by %s",
+    async (role) => {
+      await as(ids.coach);
+      await save();
+      await as(ids[role]);
+      const result = await db.query(
+        "update public.attendance set status='absent' where event_id=$1",
+        [ids.event],
+      );
+      expect(result.affectedRows).toBe(0);
+      expect((await history()).items[0].status).toBe("present");
+    },
+  );
+  it("scopes both roster and history to self/linked children, including reasons", async () => {
+    await as(ids.admin);
+    await save([
+      change(ids.child, "excused", 0, "Rodinný program"),
+      change(ids.sibling),
+    ]);
+    await save([change(ids.stranger)], ids.otherEvent);
+    await as(ids.child);
+    expect((await roster()).items.map((p) => p.profile_id)).toEqual([
+      ids.child,
+    ]);
+    expect((await history()).items.map((p) => p.player_id)).toEqual([
+      ids.child,
+    ]);
+    await as(ids.parent);
+    expect((await roster()).items.map((p) => p.profile_id).sort()).toEqual([
+      ids.child,
+      ids.sibling,
+    ]);
+    expect((await history()).total).toBe(2);
+    await as(ids.admin);
+    await db.query(
+      "delete from public.guardian_players where guardian_id=$1 and player_id=$2",
+      [ids.parent, ids.child],
+    );
+    await as(ids.parent);
+    expect((await history()).items.map((p) => p.player_id)).toEqual([
+      ids.sibling,
+    ]);
+    expect((await roster()).items.map((p) => p.profile_id)).toEqual([
+      ids.sibling,
+    ]);
+  });
+  it.each(["membership", "role", "active"])(
+    "immediately rejects the same JWT after coach %s is revoked",
+    async (kind) => {
+      await as(ids.coach);
+      await save();
+      await as(ids.admin);
+      if (kind === "membership")
+        await db.query(
+          "delete from public.team_memberships where profile_id=$1",
+          [ids.coach],
+        );
+      if (kind === "role")
+        await db.query("delete from public.user_roles where profile_id=$1", [
+          ids.coach,
+        ]);
+      if (kind === "active")
+        await db.query("update public.profiles set active=false where id=$1", [
+          ids.coach,
+        ]);
+      await as(ids.coach);
+      expect((await history()).total).toBe(0);
+      await expect(
+        save([change(ids.child, "absent", 1)]),
+      ).rejects.toMatchObject({ code: "42501" });
+    },
+  );
+  it.each(["membership", "role", "deactivation"])(
+    "preserves historical attendance after player %s removal and permits an authorized correction",
+    async (removed) => {
+      await as(ids.coach);
+      await save();
+      await as(ids.admin);
+      if (removed === "membership")
+        await db.query(
+          "delete from public.team_memberships where profile_id=$1",
+          [ids.child],
+        );
+      else if (removed === "role")
+        await db.query(
+          "delete from public.user_roles where profile_id=$1 and role='player'",
+          [ids.child],
+        );
+      else
+        await db.query("update public.profiles set active=false where id=$1", [
+          ids.child,
+        ]);
+      await as(ids.coach);
+      expect(
+        (await roster()).items.find((p) => p.profile_id === ids.child),
+      ).toMatchObject({
+        attendance: "present",
+        full_name: "Fixture child",
+        current_member: false,
+        can_respond: false,
+      });
+      expect((await save([change(ids.child, "late", 1)]))[0]).toMatchObject({
+        status: "late",
+        version: 2,
+      });
+      await as(ids.admin);
+      await db.query(
+        "delete from public.team_memberships where profile_id=$1",
+        [ids.coach],
+      );
+      await as(ids.coach);
+      await expect(
+        save([change(ids.child, "absent", 2)]),
+      ).rejects.toMatchObject({ code: "42501" });
+    },
+  );
+  it("rejects inserting a departed player and rolls back valid earlier entries", async () => {
+    await as(ids.admin);
+    await db.query("delete from public.team_memberships where profile_id=$1", [
+      ids.sibling,
+    ]);
+    await as(ids.coach);
+    await db.exec("savepoint removed_player");
+    await expect(
+      save([change(ids.child), change(ids.sibling)]),
+    ).rejects.toMatchObject({ code: "42501" });
+    await db.exec("rollback to savepoint removed_player");
+    expect(await count("attendance")).toBe(0);
+  });
+  it("rejects batch and direct changes to a cancelled session", async () => {
+    await as(ids.coach);
+    await save();
+    await db.query("update public.events set status='cancelled' where id=$1", [
+      ids.event,
+    ]);
+    await db.exec("savepoint cancelled_save");
+    await expect(save([change(ids.child, "absent", 1)])).rejects.toMatchObject({
+      code: "42501",
+    });
+    await db.exec("rollback to savepoint cancelled_save");
+    await expect(
+      db.query(
+        "update public.attendance set status='absent' where event_id=$1",
+        [ids.event],
+      ),
+    ).rejects.toMatchObject({ code: "42501" });
+  });
+  it.each([
+    [change(), change()],
+    [change(ids.child, "excused", 0, "x".repeat(201))],
+    [change(ids.child, "present", 0, "Reason on wrong status")],
+    [],
+  ])("rejects invalid or duplicated batch input", async (...changes) => {
+    await as(ids.coach);
+    await expect(save(changes)).rejects.toMatchObject({ code: "22023" });
   });
 });
 

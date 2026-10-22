@@ -1,6 +1,10 @@
 # Feature status - 2026-10-22
 
+Aktuálna integrácia: mobilná dochádzka a novšie bezpečnostné opravy fungujú spoločne; **296/296 lokálnych testov**. Odstránené konflikty, zachovaný súkromný kontext prístupu a verziované uloženie. Opravy histórie po odchode/deaktivácii hráča overené vrátane odobratia trénerstva. Lokálne **22 migrácií, 19 tabuliek, 27 RPC**. Štyri migrácie nad historickým živým základom čakajú na overenie histórie (Management HTTP 401) a nasadenie; hosted acceptance nie je potvrdené. Podrobnosti a záverečné kontroly sú v [PROGRESS.md](PROGRESS.md). Staršie počty a blokátory nižšie sú historické.
+
 ## Aktuálne doplnenie — oprávnenia
+
+Bezpečnostná aktualizácia: Next.js a eslint-config-next 16.4.2; typecheck, lint, testy a build prešli. Produkčný npm audit je čistý. Päť zostávajúcich hlásení sa týka vývojového reťazca ESLint/braces; podrobnosti v PROGRESS.md. Nasledujúci auditový míľnik zachytáva stav pred spojením s dochádzkou.
 
 - Lokálne dokončené: serverové kontroly tímov, osobnej/rodičovskej odpovede a publika oznamov; odobratie poslednej roly a rodičovskej roly bez obnovy JWT; nemenné väzby účasti a ochrana presunu udalosti so súkromnou históriou.
 - Osobné roly nemajú členský adresár. Tréner číta dostupné profily a spravuje iba priradené tímy. Finančné stránky a navigácia používajú aktuálnu oprávnenosť administrátora, dospelého hráča alebo rodiča s prepojením; samotný tréner financie nezískava.
@@ -9,6 +13,9 @@
 - **Dve nové migrácie čakajú na živé overenie/aplikovanie.** Lokálne 20 migrácií / 19 RLS tabuliek / 26 RPC. Historicky na teste aplikovaných 18; aktuálnu históriu blokuje Management HTTP 401. Existujúci živý kontrakt prešiel 64 kontrolami; nový runner má 26 úspešných a 5 blokovaných kvôli chýbajúcemu `viewer_context`. Nové opravy zatiaľ nemajú hosted acceptance.
 
 Nasledujúce odseky opisujú historický stav do 19. októbra; aktuálne blokátory a postup majú prednosť.
+## Attendance milestone - 2026-10-21 (historical results)
+
+Aktualizácia 21. októbra: **nový trénerov zápis dochádzky je implementovaný lokálne** v existujúcom detaile tréningu. Priame stavové tlačidlá, hromadné označenie a vrátenie, vyhľadávanie, počty, dôvod ospravedlnenia, neoznačený stav, atomické uloženie, opravy s verziou a riešenie konfliktov. Vstupy vedú z kalendára, tímu, prehľadu a sekcie Dochádzka. Odpovede rodičov/hráčov zostávajú samostatné. Nová migrácia ešte **nie je na živom Supabase**. Cielené PostgreSQL/RLS a serverové testy prešli; kompletná sada má tri existujúce blokátory súkromných polí. Aktuálny výsledok a hranice sú v [PROGRESS.md](PROGRESS.md) a [ATTENDANCE.md](ATTENDANCE.md); historické zelené výsledky nižšie sa nevzťahujú na aktuálnu kompletnú sadu.
 
 Implementation and local verification are separate from live acceptance. See [requirements gaps](REQUIREMENTS_GAPS.md) and the [live acceptance runbook](LIVE_ACCEPTANCE.md).
 

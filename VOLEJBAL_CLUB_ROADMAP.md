@@ -15,6 +15,8 @@
 
 ## Pravidlá práce
 
+Aktualizácia integrácie 22. októbra: dochádzka a bezpečnostné opravy sú spojené bez konfliktných značiek, 296 lokálnych testov prešlo. Nová zjednocujúca migrácia zachováva opravy historickej dochádzky aj aktuálne oprávnenia. Spolu 22 lokálnych migrácií; štyri nad historickým vzdialeným základom čakajú na potvrdenie histórie a živé overenie. Management API naďalej vracia HTTP 401. Záverečné overenie bezpečnostnej aktualizácie Next.js a aktuálne výsledky: `docs/PROGRESS.md`.
+
 - Pokračovať v **existujúcom** projekte; neprepisovať ho od začiatku.
 - Používať existujúci Graphify výstup na orientáciu a čítať len relevantné súbory; graf nenahrádza kontrolu implementácie.
 - Využívať vhodné Codex skills (najmä `frontend-design`, `web-design-guidelines`, `vercel-react-best-practices`, Supabase skills) podľa potreby. Codex si môže organizovať prácu samostatne.
@@ -25,6 +27,8 @@
 - Finálne rozhodnutie o hostingu a platnom tarife robiť podľa **aktuálnych** cien, licenčných podmienok, limitov a technickej kompatibility.
 
 ## Súčasný overený/predbežný stav
+
+**Aktualizácia dochádzky (21. 10.):** Lokálne je implementovaný trénerov súpis s priamym označením, hromadným zápisom, opravami, auditom a ochranou konfliktov. Integruje existujúci kalendár, tím, prehľad aj dochádzku. Nová migrácia nie je aplikovaná na živom Supabase; aktuálna kompletná testovacia sada má tri pôvodné zlyhania súkromných polí mimo dochádzky. Historický údaj o 169 zelených testoch nižšie nie je aktuálnym výsledkom. Presné kontroly a ďalšie kroky: `docs/ATTENDANCE.md`, `docs/PROGRESS.md` a `docs/ROADMAP.md`.
 
 - [x] Existuje Next.js aplikácia s prepojením na testovací Supabase projekt.
 - [x] Aktuálne **169 lokálnych automatických testov**; TypeScript, lint a build. Presné overenie a limity sú v `docs/PROGRESS.md`, `docs/UI_REVIEW.md` a `docs/BRAND_REVIEW.md`.
