@@ -1,5 +1,6 @@
 import { requireAdmin } from "@/lib/auth";
-import { rows } from "@/lib/data";
+import { rows, one } from "@/lib/data";
+import { auditActorsSchema } from "@/lib/access";
 import { PageHeading, Panel, Empty } from "@/components/shared";
 import { dateTime } from "@/lib/utils";
 import { Pagination } from "@/components/pagination";
@@ -25,6 +26,7 @@ const names: Record<string, string> = {
   charge_adjustments: "Oprava členského poplatku",
   announcements: "Klubový oznam",
   club_settings: "Nastavenia klubu",
+  internal_notes: "Interná poznámka",
 };
 export default async function Audit({
   searchParams,
@@ -46,11 +48,8 @@ export default async function Audit({
     ...new Set(logs.map((l) => l.actor_id).filter((id): id is string => !!id)),
   ];
   const actors = actorIds.length
-    ? rows(
-        await v.db
-          .from("profiles")
-          .select("user_id,full_name")
-          .in("user_id", actorIds),
+    ? auditActorsSchema.parse(
+        one(await v.db.rpc("audit_actor_names", { p_ids: actorIds })),
       )
     : [];
   return (
@@ -62,25 +61,37 @@ export default async function Audit({
       <Panel title="Auditná stopa">
         {logs.length ? (
           <div className="data-table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Kedy</th>
-                  <th>Kto</th>
-                  <th>Oblasť</th>
-                  <th>Zmena</th>
+            <table className="data-table responsive-table" role="table">
+              <thead role="rowgroup">
+                <tr role="row">
+                  <th scope="col" role="columnheader">
+                    Kedy
+                  </th>
+                  <th scope="col" role="columnheader">
+                    Kto
+                  </th>
+                  <th scope="col" role="columnheader">
+                    Oblasť
+                  </th>
+                  <th scope="col" role="columnheader">
+                    Zmena
+                  </th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody role="rowgroup">
                 {logs.map((l) => (
-                  <tr key={l.id}>
-                    <td>{dateTime(l.created_at)}</td>
-                    <td>
+                  <tr role="row" key={l.id}>
+                    <td role="cell" data-label="Kedy">
+                      {dateTime(l.created_at)}
+                    </td>
+                    <td role="cell" data-label="Kto">
                       {actors.find((a) => a.user_id === l.actor_id)
                         ?.full_name || "Systém / odstránený účet"}
                     </td>
-                    <td>{names[l.table_name] || "Klubový záznam"}</td>
-                    <td>
+                    <td role="cell" data-label="Oblasť">
+                      {names[l.table_name] || "Klubový záznam"}
+                    </td>
+                    <td role="cell" data-label="Zmena">
                       {{
                         INSERT: "Vytvorené",
                         UPDATE: "Upravené",

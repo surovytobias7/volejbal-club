@@ -13,10 +13,7 @@ export function Pagination({
   count: number;
 }) {
   return (
-    <nav
-      aria-label="Stránkovanie záznamov"
-      className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 p-5"
-    >
+    <nav aria-label="Stránkovanie záznamov" className="pagination">
       <span className="muted text-sm" role="status">
         Zobrazené záznamy: {count}
       </span>

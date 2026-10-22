@@ -14,7 +14,7 @@ export const memberPageSchema = z.object({
       id: z.uuid(),
       full_name: z.string(),
       active: z.boolean(),
-      user_id: z.uuid().nullable(),
+      account_linked: z.boolean().nullable(),
       roles: z.array(z.enum(["admin", "coach", "player", "guardian"])),
     }),
   ),

@@ -125,13 +125,13 @@ export default async function Announcements({
         </Link>
       </form>
       {page.items.length ? (
-        <div className="stack">
+        <div className="stack announcement-feed">
           {page.items.map((a) => (
-            <Panel key={a.id} title={a.title}>
+            <Panel key={a.id} title={a.title} plain>
               <div className="panel-body">
                 <div className="event-meta">
                   <span className="badge">
-                    {a.recipient_ids.length
+                    {a.audience === "people"
                       ? "Konkrétni členovia"
                       : a.team_id || a.extra_team_ids.length
                         ? `Vybrané tímy (${a.extra_team_ids.length + (a.team_id ? 1 : 0)})`
@@ -148,6 +148,7 @@ export default async function Announcements({
                     <FormDialog
                       title="Upraviť oznam"
                       label="Upraviť"
+                      variant="secondary"
                       description="Zmena publika okamžite mení prístup k oznamu aj jeho upozorneniam."
                     >
                       <ActionForm
@@ -180,6 +181,7 @@ export default async function Announcements({
                         hidden={{ command: "archive-announcement", id: a.id }}
                         fields={[]}
                         submit="Archivovať oznam"
+                        variant="secondary"
                       />
                     )}
                   </div>

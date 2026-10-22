@@ -1,5 +1,7 @@
-import Link from "next/link";
-import { requireViewer, roleNames } from "@/lib/auth";
+import { MemberTable } from "@/components/records";
+import { requireViewer } from "@/lib/auth";
+import { notFound } from "next/navigation";
+import { canBrowseMembers } from "@/lib/access";
 import { one } from "@/lib/data";
 import { Pagination } from "@/components/pagination";
 import {
@@ -21,6 +23,7 @@ export default async function Members({
   searchParams: DirectorySearch;
 }) {
   const v = await requireViewer();
+  if (!canBrowseMembers(v.roles)) notFound();
   const admin = v.roles.includes("admin");
   const params = await searchParams;
   const q = directoryQuery(params);
@@ -40,8 +43,12 @@ export default async function Members({
   return (
     <>
       <PageHeading
-        title="Členovia klubu"
-        description="Hráči, tréneri a rodičia. Prepojení v jednom klube."
+        title={admin ? "Členovia klubu" : "Členovia mojich tímov"}
+        description={
+          admin
+            ? "Hráči, tréneri a rodičia. Prepojení v jednom klube."
+            : "Profily a kontakty členov tímov, ktoré vediete."
+        }
         action={
           admin && (
             <FormDialog
@@ -72,57 +79,23 @@ export default async function Members({
             name="q"
             maxLength={160}
             defaultValue={q}
-            placeholder="Meno alebo priezvisko"
+            placeholder="Meno alebo priezvisko…"
+            autoComplete="off"
           />
         </label>
         <Button variant="secondary">Hľadať</Button>
       </form>
       <Panel title={`Členovia (${page.total})`}>
         {members.length ? (
-          <div className="data-table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Meno</th>
-                  <th>Roly</th>
-                  <th>Stav</th>
-                  <th>Profil</th>
-                </tr>
-              </thead>
-              <tbody>
-                {members.map((p) => (
-                  <tr key={p.id}>
-                    <td>
-                      <strong>{p.full_name}</strong>
-                      <small>
-                        {p.user_id
-                          ? "Prepojený účet"
-                          : "Bez prihlasovacieho účtu"}
-                      </small>
-                    </td>
-                    <td>{p.roles.map((r) => roleNames[r]).join(", ")}</td>
-                    <td>
-                      <span
-                        className={`badge ${p.active ? "success" : "danger"}`}
-                      >
-                        {p.active ? "Aktívny" : "Neaktívny"}
-                      </span>
-                    </td>
-                    <td>
-                      <Link
-                        className="text-link"
-                        href={`/klub/clenovia/${p.id}`}
-                      >
-                        Otvoriť profil
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <MemberTable members={members} />
         ) : (
-          <Empty description="Vytvorte prvý členský profil alebo upravte vyhľadávanie." />
+          <Empty
+            description={
+              admin
+                ? "Vytvorte prvý členský profil alebo upravte vyhľadávanie."
+                : "Upravte vyhľadávanie. Členov do tímu priraďuje správca klubu."
+            }
+          />
         )}
         <Pagination
           firstHref={directoryHref("/klub/clenovia", filters)}

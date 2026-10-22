@@ -1,5 +1,6 @@
 import { z } from "zod";
-export const attendanceStatus = z.enum(["present", "absent", "excused"]);
+import { attendanceStatus } from "@/lib/attendance";
+export { attendanceStatus } from "@/lib/attendance";
 const timestamp = z.iso.datetime({ offset: true });
 const count = z.number().int().nonnegative().safe();
 export const attendancePageSchema = z.object({
@@ -17,6 +18,7 @@ export const attendancePageSchema = z.object({
   has_more: z.boolean(),
   total: count,
   present: count,
+  late: count,
   absent: count,
   excused: count,
 });
@@ -39,6 +41,7 @@ export const announcementPageSchema = z.object({
       team_id: z.uuid().nullable(),
       extra_team_ids: z.array(z.uuid()),
       recipient_ids: z.array(z.uuid()),
+      audience: z.enum(["club", "teams", "people"]),
       can_manage: z.boolean(),
       author_name: z.string(),
       important: z.boolean(),

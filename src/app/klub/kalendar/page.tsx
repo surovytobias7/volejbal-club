@@ -103,7 +103,7 @@ export default async function Calendar({
           )
         }
       />
-      <div className="toolbar">
+      <div className="toolbar calendar-toolbar">
         <Link
           className="icon-button"
           aria-label="Predchádzajúce obdobie"
@@ -140,6 +140,7 @@ export default async function Calendar({
           ].map((x) => (
             <Link
               className={view === x.id ? "active" : ""}
+              aria-current={view === x.id ? "page" : undefined}
               href={href({ view: x.id })}
               key={x.id}
             >

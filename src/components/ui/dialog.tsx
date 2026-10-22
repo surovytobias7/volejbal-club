@@ -1,6 +1,6 @@
 "use client";
 import * as Dialog from "@radix-ui/react-dialog";
-import { X, Plus } from "lucide-react";
+import { X } from "lucide-react";
 import type { ReactNode } from "react";
 import { Button } from "./button";
 
@@ -9,23 +9,22 @@ export function FormDialog({
   description,
   children,
   label = title,
+  variant = "default",
 }: {
   title: string;
   description: string;
   children: ReactNode;
   label?: string;
+  variant?: "default" | "secondary";
 }) {
   return (
     <Dialog.Root>
       <Dialog.Trigger asChild>
-        <Button>
-          <Plus size={17} aria-hidden />
-          {label}
-        </Button>
+        <Button variant={variant}>{label}</Button>
       </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className="dialog-overlay" />
-        <Dialog.Content className="dialog-content">
+        <Dialog.Content className="dialog-content" aria-modal="true">
           <Dialog.Title className="dialog-title">{title}</Dialog.Title>
           <Dialog.Description className="muted">
             {description}

@@ -55,12 +55,16 @@ async function account(label, expectedRole) {
       `${label}: serverové overenie identity`,
       !user.error && user.data.user?.id === login.data.user.id,
     );
-    const profiles = await db
-      .from("profiles")
-      .select("id,active")
-      .eq("user_id", login.data.user.id);
+    const context = await db.rpc("viewer_context");
+    if (context.error?.code === "PGRST202") {
+      report.blocked(`${label}: chýba migrácia prístupového kontextu`);
+      return;
+    }
     if (label === "INACTIVE") {
-      report.add(`${label}: profil neprístupný`, deniedOrEmpty(profiles));
+      report.add(
+        `${label}: profil neprístupný`,
+        !context.error && context.data === null,
+      );
       for (const table of [
         "charges",
         "events",
@@ -73,11 +77,12 @@ async function account(label, expectedRole) {
         );
       return;
     }
-    const profile = profiles.data?.[0];
+    const profile = context.data;
     const linked =
-      !profiles.error &&
-      profiles.data?.length === 1 &&
-      profile?.active === true;
+      !context.error &&
+      typeof profile?.id === "string" &&
+      Array.isArray(profile.roles) &&
+      profile.roles.length > 0;
     report.add(`${label}: aktívny prepojený profil`, linked);
     if (!linked) return;
     const roles = await db

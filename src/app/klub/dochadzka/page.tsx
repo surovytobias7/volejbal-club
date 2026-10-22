@@ -1,10 +1,11 @@
-﻿import Link from "next/link";
+import { AttendanceTable } from "@/components/records";
+import { AttendanceSessions } from "@/features/attendance-sessions";
+import Link from "next/link";
 import { z } from "zod";
 import { requireViewer } from "@/lib/auth";
 import { one } from "@/lib/data";
 import { PageHeading, Panel, Empty } from "@/components/shared";
 import { Pagination } from "@/components/pagination";
-import { dateTime } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   attendancePageSchema,
@@ -53,6 +54,7 @@ export default async function Attendance({
         title="Dochádzka"
         description="Skutočná účasť zaznamenaná trénerom. Potvrdenie účasti sa do štatistiky nezapočítava."
       />
+      <AttendanceSessions />
       <form className="toolbar">
         {player && <input type="hidden" name="player" value={player} />}
         <label className="field">
@@ -70,6 +72,7 @@ export default async function Attendance({
             <option value="">Všetky stavy</option>
             <option value="present">Prítomný</option>
             <option value="absent">Neprítomný</option>
+            <option value="late">Meškanie</option>
             <option value="excused">Ospravedlnený</option>
           </select>
         </label>
@@ -78,12 +81,12 @@ export default async function Attendance({
           Zrušiť filtre
         </Link>
       </form>
-      <div className="dashboard-stats">
+      <div className="dashboard-stats attendance-summary">
         <div className="stat">
           <span className="muted">Zaznamenaná účasť</span>
           <strong>
             {page.total
-              ? `${Math.round((page.present / page.total) * 100)} %`
+              ? `${Math.round(((page.present + page.late) / page.total) * 100)} %`
               : "—"}
           </strong>
           <small>Všetky záznamy podľa filtrov ({page.total})</small>
@@ -91,7 +94,7 @@ export default async function Attendance({
         <div className="stat">
           <span className="muted">Prítomní</span>
           <strong>{page.present}</strong>
-          <small>Potvrdené trénerom</small>
+          <small>Okrem toho s meškaním: {page.late}</small>
         </div>
         <div className="stat">
           <span className="muted">Neprítomní</span>
@@ -106,53 +109,7 @@ export default async function Attendance({
       </div>
       <Panel title="História účasti">
         {page.items.length ? (
-          <div className="data-table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Hráč</th>
-                  <th>Udalosť</th>
-                  <th>Dátum</th>
-                  <th>Účasť</th>
-                </tr>
-              </thead>
-              <tbody>
-                {page.items.map((r) => (
-                  <tr key={`${r.event_id}-${r.player_id}`}>
-                    <td>{r.full_name ?? "Hráč"}</td>
-                    <td>
-                      {r.title ? (
-                        <Link
-                          className="text-link"
-                          href={`/klub/kalendar/${r.event_id}`}
-                        >
-                          {r.title}
-                        </Link>
-                      ) : (
-                        "Historická udalosť"
-                      )}
-                    </td>
-                    <td>
-                      {r.starts_at ? dateTime(r.starts_at, "d. M. yyyy") : "—"}
-                    </td>
-                    <td>
-                      <span
-                        className={`badge ${r.status === "present" ? "success" : r.status === "absent" ? "danger" : ""}`}
-                      >
-                        {
-                          {
-                            present: "Prítomný",
-                            absent: "Neprítomný",
-                            excused: "Ospravedlnený",
-                          }[r.status]
-                        }
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <AttendanceTable records={page.items} />
         ) : (
           <Empty
             title="Žiadne záznamy podľa filtrov"

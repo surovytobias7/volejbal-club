@@ -1,9 +1,18 @@
 import { PGlite } from "@electric-sql/pglite";
+import {
+  savedAttendanceSchema,
+  type AttendanceInput,
+} from "../../src/lib/attendance";
+import { notesPageSchema } from "../../src/lib/notes";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { eventRosterSchema, teamRosterSchema } from "../../src/lib/rosters";
 import { calendarPageSchema } from "../../src/lib/calendar-data";
 import { guardianDashboardSchema } from "../../src/lib/guardian-dashboard";
+import {
+  playerResponsesSchema,
+  withPlayerResponses,
+} from "../../src/lib/player-dashboard";
 import {
   attendancePageSchema,
   announcementPageSchema,
@@ -93,6 +102,1091 @@ afterEach(async () => {
 });
 afterAll(async () => {
   await db.close();
+});
+
+describe("comprehensive access audit regressions", () => {
+  it.each(["admin", "coach", "parent", "child", "adult", "inactive"] as const)(
+    "returns a minimal current viewer context for %s",
+    async (role) => {
+      await as(ids[role]);
+      const result = (
+        await db.query<{ data: Record<string, unknown> | null }>(
+          "select public.viewer_context() as data",
+        )
+      ).rows[0].data;
+      if (role === "inactive") expect(result).toBeNull();
+      else {
+        expect(result).toMatchObject({
+          id: ids[role],
+          can_finance: ["admin", "parent", "adult"].includes(role),
+        });
+        expect(Object.keys(result!).sort()).toEqual([
+          "can_finance",
+          "id",
+          "name",
+          "roles",
+        ]);
+      }
+    },
+  );
+  it.each(["coach", "inactive"] as const)(
+    "denies private details to %s including null-viewer bypass",
+    async (role) => {
+      await as(ids[role]);
+      await expect(
+        db.query("select public.member_private_details($1)", [ids.child]),
+      ).rejects.toThrow();
+    },
+  );
+  it.each(["parent", "child", "admin"] as const)(
+    "retains authorized birth-date access without exposing Auth identifiers for %s",
+    async (role) => {
+      await as(ids[role]);
+      const { rows } = await db.query<{ data: Record<string, unknown> }>(
+        "select public.member_private_details($1) as data",
+        [ids.child],
+      );
+      expect(rows[0].data.birth_date).toBe("2012-01-01");
+      expect(rows[0].data.account_linked).toBe(role === "admin" ? true : null);
+      expect(rows[0].data).not.toHaveProperty("user_id");
+    },
+  );
+  it("does not permit Auth-ID predicates on otherwise readable profiles", async () => {
+    await as(ids.coach);
+    await expect(
+      db.query("select id from public.profiles where user_id=$1", [ids.child]),
+    ).rejects.toThrow();
+  });
+  it("keeps member administration out of personal directory RPCs", async () => {
+    for (const id of [ids.parent, ids.child]) {
+      await as(id);
+      const { rows } = await db.query<{
+        data: { items: unknown[]; total: number };
+      }>("select public.member_page(null,null,null) as data");
+      expect(rows[0].data).toMatchObject({ items: [], total: 0 });
+    }
+  });
+  it("masks account state for coaches but preserves administrator directory management", async () => {
+    for (const id of [ids.admin, ids.coach]) {
+      await as(id);
+      const { rows } = await db.query<{
+        data: { items: Record<string, unknown>[] };
+      }>("select public.member_page(null,null,null) as data");
+      expect(rows[0].data.items.length).toBeGreaterThan(0);
+      for (const item of rows[0].data.items) {
+        expect(item).not.toHaveProperty("user_id");
+        expect(item.account_linked).toBe(id === ids.admin ? true : null);
+      }
+    }
+  });
+  it("revokes guardian links even when an unrelated coach role remains", async () => {
+    await as(ids.admin);
+    await db.query("insert into public.user_roles values($1,'coach')", [
+      ids.parent,
+    ]);
+    await db.query(
+      "delete from public.user_roles where profile_id=$1 and role='guardian'",
+      [ids.parent],
+    );
+    await as(ids.parent);
+    expect(await count("guardian_players")).toBe(0);
+    expect(await count("charges")).toBe(0);
+    expect(await count("events")).toBe(0);
+    const { rows } = await db.query<{ data: { can_finance: boolean } }>(
+      "select public.viewer_context() as data",
+    );
+    expect(rows[0].data.can_finance).toBe(false);
+  });
+  it("cannot impersonate availability using administrator access alone", async () => {
+    await as(ids.admin);
+    await expect(
+      db.query(
+        "insert into public.availability(event_id,player_id,response) values($1,$2,'yes')",
+        [ids.event, ids.child],
+      ),
+    ).rejects.toThrow();
+  });
+  it("preserves independent availability and attendance, with database actor/time stamps on correction", async () => {
+    await as(ids.parent);
+    await db.query(
+      "insert into public.availability(event_id,player_id,response) values($1,$2,'no')",
+      [ids.event, ids.child],
+    );
+    await as(ids.coach);
+    await db.query(
+      "insert into public.attendance(event_id,player_id,status) values($1,$2,'present')",
+      [ids.event, ids.child],
+    );
+    const { rows } = await db.query<{ updated_by: string; trusted: boolean }>(
+      "update public.attendance set status='excused',updated_by=$1,updated_at='1900-01-01' returning updated_by,updated_at>'2020-01-01' as trusted",
+      [ids.parent],
+    );
+    expect(rows).toEqual([{ updated_by: ids.coach, trusted: true }]);
+    expect(
+      (
+        await db.query<{ response: string }>(
+          "select response from public.availability",
+        )
+      ).rows[0].response,
+    ).toBe("no");
+  });
+  it("still permits empty event transfer and ordinary edits to populated events", async () => {
+    await as(ids.admin);
+    await db.query("update public.events set team_id=$1 where id=$2", [
+      ids.team,
+      ids.otherEvent,
+    ]);
+    await db.query(
+      "insert into public.attendance(event_id,player_id,status) values($1,$2,'present')",
+      [ids.event, ids.child],
+    );
+    await db.query("update public.events set venue='Druhá hala' where id=$1", [
+      ids.event,
+    ]);
+    expect(
+      (
+        await db.query<{ venue: string }>(
+          "select venue from public.events where id=$1",
+          [ids.event],
+        )
+      ).rows[0].venue,
+    ).toBe("Druhá hala");
+  });
+  it("cannot transfer an event that only has planned availability", async () => {
+    await as(ids.child);
+    await db.query(
+      "insert into public.availability(event_id,player_id,response) values($1,$2,'yes')",
+      [ids.event, ids.child],
+    );
+    await as(ids.admin);
+    await expect(
+      db.query("update public.events set team_id=$1 where id=$2", [
+        ids.other,
+        ids.event,
+      ]),
+    ).rejects.toThrow();
+  });
+  it("masks named audiences on the page RPC while preserving manager editing and one audit record", async () => {
+    await as(ids.admin);
+    await db.query(
+      "insert into public.announcements(title,body,author_id,recipient_ids) values('Adresný oznam','Pokyny',$1,array[$2,$3]::uuid[])",
+      [ids.admin, ids.parent, ids.adult],
+    );
+    expect(
+      (
+        await db.query(
+          "select id from public.audit_logs where table_name='announcements'",
+        )
+      ).rows,
+    ).toHaveLength(1);
+    for (const id of [ids.admin, ids.parent, ids.child]) {
+      await as(id);
+      const { rows } = await db.query<{
+        data: { items: { recipient_ids: string[]; audience: string }[] };
+      }>("select public.announcement_page(null,false,null,null,null) as data");
+      if (id === ids.child) expect(rows[0].data.items).toEqual([]);
+      else
+        expect(rows[0].data.items[0]).toMatchObject({
+          audience: "people",
+          recipient_ids: id === ids.admin ? [ids.parent, ids.adult] : [],
+        });
+    }
+  });
+  it.each([
+    "profiles",
+    "member_details",
+    "teams",
+    "club_settings",
+    "fee_plans",
+  ])(
+    "denies unsupported destructive deletion of %s even for administrators",
+    async (table) => {
+      await as(ids.admin);
+      await expect(db.exec(`delete from public.${table}`)).rejects.toThrow();
+    },
+  );
+  it("requires an administrator for account linking", async () => {
+    await as(ids.child);
+    await expect(
+      db.query("select public.link_member_account($1,$2)", [
+        ids.child,
+        ids.adult,
+      ]),
+    ).rejects.toThrow();
+  });
+  it("stamps payment provenance and preserves its financial audit", async () => {
+    await as(ids.admin);
+    const { rows } = await db.query<{
+      id: string;
+      recorded_by: string;
+      trusted: boolean;
+    }>(
+      "insert into public.payments(charge_id,amount_cents,note,recorded_by,created_at) values($1,1000,'Fiktívna úhrada',$2,'1900-01-01') returning id,recorded_by,created_at>'2020-01-01' as trusted",
+      [ids.charge, ids.coach],
+    );
+    expect(rows[0]).toMatchObject({ recorded_by: ids.admin, trusted: true });
+    const audit = await db.query<{ actor_id: string; recorded_by: string }>(
+      "select actor_id,new_data->>'recorded_by' as recorded_by from public.audit_logs where table_name='payments' and record_id=$1",
+      [rows[0].id],
+    );
+    expect(audit.rows).toEqual([
+      { actor_id: ids.admin, recorded_by: ids.admin },
+    ]);
+  });
+  it("links only an active unlinked profile, without exposing the Auth ID", async () => {
+    await as(ids.admin);
+    const profile = (
+      await db.query<{ id: string }>(
+        "select public.create_member('Fiktívny člen',null,null,null,'player') as id",
+      )
+    ).rows[0].id;
+    await db.exec("reset role");
+    await db.query("insert into auth.users(id) values($1)", [uid(99)]);
+    await as(ids.admin);
+    await db.query("select public.link_member_account($1,$2)", [
+      profile,
+      uid(99),
+    ]);
+    expect(
+      (
+        await db.query<{ data: { account_linked: boolean } }>(
+          "select public.member_private_details($1) as data",
+          [profile],
+        )
+      ).rows[0].data.account_linked,
+    ).toBe(true);
+    await expect(
+      db.query("select public.link_member_account($1,$2)", [
+        profile,
+        ids.adult,
+      ]),
+    ).rejects.toThrow();
+  });
+  it("denies audit actor lookup outside administration", async () => {
+    await as(ids.coach);
+    await expect(
+      db.query("select public.audit_actor_names(array[$1]::uuid[])", [
+        ids.admin,
+      ]),
+    ).rejects.toThrow();
+  });
+  it("keeps the new public and private helpers inaccessible to anonymous callers", async () => {
+    const { rows } = await db.query<{ allowed: boolean }>(
+      "select has_function_privilege('anon',p.oid,'execute') as allowed from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname in ('public','private') and p.proname in ('viewer_context','member_private_details','member_account_linked','link_member_account','audit_actor_names','can_manage_announcement')",
+    );
+    expect(rows.length).toBeGreaterThan(10);
+    expect(rows.every((r) => !r.allowed)).toBe(true);
+  });
+  it("cannot transfer an event with private player records to a new team", async () => {
+    await as(ids.coach);
+    await db.query(
+      "insert into public.attendance(event_id,player_id,status) values($1,$2,'present')",
+      [ids.event, ids.child],
+    );
+    await as(ids.admin);
+    await expect(
+      db.query("update public.events set team_id=$1 where id=$2", [
+        ids.other,
+        ids.event,
+      ]),
+    ).rejects.toThrow();
+  });
+  it("cannot transfer a training note to another team through its event", async () => {
+    await as(ids.coach);
+    await db.query(
+      "insert into public.internal_notes(event_id,body) values($1,'Súkromný tréningový plán')",
+      [ids.event],
+    );
+    await as(ids.admin);
+    await expect(
+      db.query("update public.events set team_id=$1 where id=$2", [
+        ids.other,
+        ids.event,
+      ]),
+    ).rejects.toThrow();
+  });
+  it("cannot move an availability response between linked children", async () => {
+    await as(ids.parent);
+    await db.query(
+      "insert into public.availability(event_id,player_id,response) values($1,$2,'yes')",
+      [ids.event, ids.child],
+    );
+    await expect(
+      db.query(
+        "update public.availability set player_id=$1 where event_id=$2 and player_id=$3",
+        [ids.sibling, ids.event, ids.child],
+      ),
+    ).rejects.toThrow();
+  });
+  it("cannot move recorded attendance between roster players", async () => {
+    await as(ids.coach);
+    await db.query(
+      "insert into public.attendance(event_id,player_id,status) values($1,$2,'present')",
+      [ids.event, ids.child],
+    );
+    await expect(
+      db.query(
+        "update public.attendance set player_id=$1 where event_id=$2 and player_id=$3",
+        [ids.sibling, ids.event, ids.child],
+      ),
+    ).rejects.toThrow();
+  });
+  it("stamps availability time in the database instead of trusting a caller", async () => {
+    await as(ids.parent);
+    const result = await db.query<{ trusted: boolean }>(
+      "insert into public.availability(event_id,player_id,response,updated_at) values($1,$2,'yes','1900-01-01') returning updated_at > '2020-01-01' as trusted",
+      [ids.event, ids.child],
+    );
+    expect(result.rows[0].trusted).toBe(true);
+  });
+  it("denies private Auth identifiers even for an otherwise readable roster player", async () => {
+    await as(ids.coach);
+    expect(await count("profiles")).toBeGreaterThan(0);
+    await expect(
+      db.query("select user_id from public.profiles where id=$1", [ids.child]),
+    ).rejects.toThrow();
+  });
+  it("denies direct birth-date selection to the generic API role", async () => {
+    await as(ids.coach);
+    await expect(
+      db.query(
+        "select birth_date from public.member_details where profile_id=$1",
+        [ids.child],
+      ),
+    ).rejects.toThrow();
+  });
+  it("does not disclose all named recipients to one recipient", async () => {
+    await as(ids.admin);
+    await db.query(
+      "insert into public.announcements(title,body,author_id,recipient_ids) values('Adresné pokyny','Súkromné pokyny',$1,array[$2,$3]::uuid[])",
+      [ids.admin, ids.parent, ids.adult],
+    );
+    await as(ids.parent);
+    expect(await count("announcements")).toBe(1);
+    await expect(
+      db.query("select recipient_ids from public.announcements"),
+    ).rejects.toThrow();
+  });
+  it("closes club access when the last role is removed without refreshing a JWT", async () => {
+    await as(ids.admin);
+    await db.query("delete from public.user_roles where profile_id=$1", [
+      ids.parent,
+    ]);
+    await as(ids.parent);
+    expect(await count("club_settings")).toBe(0);
+    expect(await count("guardian_players")).toBe(0);
+  });
+});
+
+describe("coach attendance workflow", () => {
+  const change = (
+    player_id = ids.child,
+    status: AttendanceInput["changes"][number]["status"] = "present",
+    expected_version = 0,
+    reason = "",
+  ) => ({ player_id, status, expected_version, reason });
+  async function save(changes = [change()], event = ids.event) {
+    return savedAttendanceSchema.parse(
+      (
+        await db.query<{ data: unknown }>(
+          "select public.save_attendance($1,$2::jsonb) as data",
+          [event, JSON.stringify(changes)],
+        )
+      ).rows[0].data,
+    );
+  }
+  async function roster(event = ids.event) {
+    return eventRosterSchema.parse(
+      (
+        await db.query<{ data: unknown }>(
+          "select public.event_roster_page($1,'',null,null) as data",
+          [event],
+        )
+      ).rows[0].data,
+    );
+  }
+  async function history() {
+    return attendancePageSchema.parse(
+      (
+        await db.query<{ data: unknown }>(
+          "select public.attendance_page('',null,null,null,null,null) as data",
+        )
+      ).rows[0].data,
+    );
+  }
+  it("starts unmarked, saves a batch, persists on roster reread and keeps availability separate", async () => {
+    await as(ids.parent);
+    await db.query(
+      "insert into public.availability(event_id,player_id,response,reason) values($1,$2,'yes',''),($1,$3,'no','Rodinný program')",
+      [ids.event, ids.child, ids.sibling],
+    );
+    await as(ids.coach);
+    expect(
+      (await roster()).items.every(
+        (p) => p.attendance === null && p.attendance_version === 0,
+      ),
+    ).toBe(true);
+    const result = await save([
+      change(ids.child, "absent"),
+      change(ids.sibling, "present"),
+    ]);
+    expect(result).toHaveLength(2);
+    expect(result.every((r) => r.version === 1)).toBe(true);
+    const reread = (await roster()).items;
+    expect(reread.find((p) => p.profile_id === ids.child)).toMatchObject({
+      attendance: "absent",
+      availability: { response: "yes" },
+    });
+    expect(reread.find((p) => p.profile_id === ids.sibling)).toMatchObject({
+      attendance: "present",
+      availability: { response: "no", reason: "Rodinný program" },
+    });
+    expect(await count("attendance")).toBe(2);
+  });
+  it("does not create absences for players omitted from a partial save", async () => {
+    await as(ids.coach);
+    await save();
+    expect(
+      (await roster()).items.find((p) => p.profile_id === ids.sibling)
+        ?.attendance_version,
+    ).toBe(0);
+    expect((await history()).total).toBe(1);
+  });
+  it("audits corrections, authentic actor and database time, and excludes an unmarked correction from statistics", async () => {
+    await as(ids.coach);
+    await save();
+    await save([change(ids.child, "excused", 1, "Rodinný program")]);
+    await save([change(ids.child, null, 2)]);
+    expect(
+      (await roster()).items.find((p) => p.profile_id === ids.child),
+    ).toMatchObject({
+      attendance: null,
+      attendance_version: 3,
+      attendance_reason: "",
+    });
+    expect((await history()).total).toBe(0);
+    await as(ids.admin);
+    const audit = await db.query<{
+      actor_id: string;
+      old_data: { status: string };
+      new_data: { status: null; version: number };
+    }>(
+      "select actor_id,old_data,new_data from public.audit_logs where table_name='attendance' and new_data->>'version'='3'",
+    );
+    expect(audit.rows[0]).toMatchObject({
+      actor_id: ids.coach,
+      old_data: { status: "excused" },
+      new_data: { status: null, version: 3 },
+    });
+    await db.query(
+      "update public.attendance set status='late',updated_by=$1,updated_at='1900-01-01',version=800 where event_id=$2",
+      [ids.coach, ids.event],
+    );
+    const record = (
+      await db.query<{ updated_by: string; version: number; stamped: boolean }>(
+        "select updated_by,version,updated_at>'2020-01-01' as stamped from public.attendance",
+      )
+    ).rows[0];
+    expect(record).toEqual({
+      updated_by: ids.admin,
+      version: 4,
+      stamped: true,
+    });
+  });
+  it("treats late as attended in dashboard/family statistics while keeping a separate history count", async () => {
+    await as(ids.coach);
+    await save([change(ids.child, "late")]);
+    expect(await history()).toMatchObject({ total: 1, present: 0, late: 1 });
+    const summary = (
+      await db.query<{ data: { participation: number } }>(
+        "select public.dashboard_summary(now()) as data",
+      )
+    ).rows[0].data;
+    expect(summary.participation).toBe(100);
+    await as(ids.parent);
+    const family = guardianDashboardSchema.parse(
+      (
+        await db.query<{ data: unknown }>(
+          "select public.guardian_dashboard(now(),null) as data",
+        )
+      ).rows[0].data,
+    );
+    expect(family.items.find((p) => p.id === ids.child)?.attendance).toEqual({
+      recorded: 1,
+      present: 1,
+    });
+  });
+  it("rejects a stale correction and rolls back the entire batch", async () => {
+    await as(ids.coach);
+    await save([change(ids.child), change(ids.sibling)]);
+    await save([change(ids.sibling, "late", 1)]);
+    await db.exec("savepoint stale_save");
+    await expect(
+      save([change(ids.child, "absent", 1), change(ids.sibling, "absent", 1)]),
+    ).rejects.toMatchObject({ code: "40001" });
+    await db.exec("rollback to savepoint stale_save");
+    const page = await roster();
+    expect(page.items.find((p) => p.profile_id === ids.child)?.attendance).toBe(
+      "present",
+    );
+    expect(
+      page.items.find((p) => p.profile_id === ids.sibling)?.attendance,
+    ).toBe("late");
+  });
+  it("safely retries an acknowledged-lost batch without duplicate records or audit updates", async () => {
+    await as(ids.coach);
+    const first = await save();
+    expect(await save()).toEqual(first);
+    expect(await count("attendance")).toBe(1);
+    await as(ids.admin);
+    expect(
+      Number(
+        (
+          await db.query<{ n: number }>(
+            "select count(*) as n from public.audit_logs where table_name='attendance'",
+          )
+        ).rows[0].n,
+      ),
+    ).toBe(1);
+  });
+  it.each(["child", "parent", "stranger", "inactive"] as const)(
+    "denies actual attendance writes by %s",
+    async (role) => {
+      await as(ids[role]);
+      await expect(save()).rejects.toMatchObject({ code: "42501" });
+    },
+  );
+  it("denies a coach's unassigned session even with a second guardian role", async () => {
+    await as(ids.admin);
+    await db.query("insert into public.user_roles values($1,'guardian')", [
+      ids.coach,
+    ]);
+    await db.query("insert into public.guardian_players values($1,$2)", [
+      ids.coach,
+      ids.stranger,
+    ]);
+    await as(ids.coach);
+    expect((await roster(ids.otherEvent)).can_manage).toBe(false);
+    await expect(
+      save([change(ids.stranger)], ids.otherEvent),
+    ).rejects.toMatchObject({ code: "42501" });
+  });
+  it("lets the administrator manage another team", async () => {
+    await as(ids.admin);
+    expect(await save([change(ids.stranger)], ids.otherEvent)).toHaveLength(1);
+  });
+  it.each(["child", "parent"] as const)(
+    "prevents direct Data API corrections by %s",
+    async (role) => {
+      await as(ids.coach);
+      await save();
+      await as(ids[role]);
+      const result = await db.query(
+        "update public.attendance set status='absent' where event_id=$1",
+        [ids.event],
+      );
+      expect(result.affectedRows).toBe(0);
+      expect((await history()).items[0].status).toBe("present");
+    },
+  );
+  it("scopes both roster and history to self/linked children, including reasons", async () => {
+    await as(ids.admin);
+    await save([
+      change(ids.child, "excused", 0, "Rodinný program"),
+      change(ids.sibling),
+    ]);
+    await save([change(ids.stranger)], ids.otherEvent);
+    await as(ids.child);
+    expect((await roster()).items.map((p) => p.profile_id)).toEqual([
+      ids.child,
+    ]);
+    expect((await history()).items.map((p) => p.player_id)).toEqual([
+      ids.child,
+    ]);
+    await as(ids.parent);
+    expect((await roster()).items.map((p) => p.profile_id).sort()).toEqual([
+      ids.child,
+      ids.sibling,
+    ]);
+    expect((await history()).total).toBe(2);
+    await as(ids.admin);
+    await db.query(
+      "delete from public.guardian_players where guardian_id=$1 and player_id=$2",
+      [ids.parent, ids.child],
+    );
+    await as(ids.parent);
+    expect((await history()).items.map((p) => p.player_id)).toEqual([
+      ids.sibling,
+    ]);
+    expect((await roster()).items.map((p) => p.profile_id)).toEqual([
+      ids.sibling,
+    ]);
+  });
+  it.each(["membership", "role", "active"])(
+    "immediately rejects the same JWT after coach %s is revoked",
+    async (kind) => {
+      await as(ids.coach);
+      await save();
+      await as(ids.admin);
+      if (kind === "membership")
+        await db.query(
+          "delete from public.team_memberships where profile_id=$1",
+          [ids.coach],
+        );
+      if (kind === "role")
+        await db.query("delete from public.user_roles where profile_id=$1", [
+          ids.coach,
+        ]);
+      if (kind === "active")
+        await db.query("update public.profiles set active=false where id=$1", [
+          ids.coach,
+        ]);
+      await as(ids.coach);
+      expect((await history()).total).toBe(0);
+      await expect(
+        save([change(ids.child, "absent", 1)]),
+      ).rejects.toMatchObject({ code: "42501" });
+    },
+  );
+  it.each(["membership", "role", "deactivation"])(
+    "preserves historical attendance after player %s removal and permits an authorized correction",
+    async (removed) => {
+      await as(ids.coach);
+      await save();
+      await as(ids.admin);
+      if (removed === "membership")
+        await db.query(
+          "delete from public.team_memberships where profile_id=$1",
+          [ids.child],
+        );
+      else if (removed === "role")
+        await db.query(
+          "delete from public.user_roles where profile_id=$1 and role='player'",
+          [ids.child],
+        );
+      else
+        await db.query("update public.profiles set active=false where id=$1", [
+          ids.child,
+        ]);
+      await as(ids.coach);
+      expect(
+        (await roster()).items.find((p) => p.profile_id === ids.child),
+      ).toMatchObject({
+        attendance: "present",
+        full_name: "Fixture child",
+        current_member: false,
+        can_respond: false,
+      });
+      expect((await save([change(ids.child, "late", 1)]))[0]).toMatchObject({
+        status: "late",
+        version: 2,
+      });
+      await as(ids.admin);
+      await db.query(
+        "delete from public.team_memberships where profile_id=$1",
+        [ids.coach],
+      );
+      await as(ids.coach);
+      await expect(
+        save([change(ids.child, "absent", 2)]),
+      ).rejects.toMatchObject({ code: "42501" });
+    },
+  );
+  it("rejects inserting a departed player and rolls back valid earlier entries", async () => {
+    await as(ids.admin);
+    await db.query("delete from public.team_memberships where profile_id=$1", [
+      ids.sibling,
+    ]);
+    await as(ids.coach);
+    await db.exec("savepoint removed_player");
+    await expect(
+      save([change(ids.child), change(ids.sibling)]),
+    ).rejects.toMatchObject({ code: "42501" });
+    await db.exec("rollback to savepoint removed_player");
+    expect(await count("attendance")).toBe(0);
+  });
+  it("rejects batch and direct changes to a cancelled session", async () => {
+    await as(ids.coach);
+    await save();
+    await db.query("update public.events set status='cancelled' where id=$1", [
+      ids.event,
+    ]);
+    await db.exec("savepoint cancelled_save");
+    await expect(save([change(ids.child, "absent", 1)])).rejects.toMatchObject({
+      code: "42501",
+    });
+    await db.exec("rollback to savepoint cancelled_save");
+    await expect(
+      db.query(
+        "update public.attendance set status='absent' where event_id=$1",
+        [ids.event],
+      ),
+    ).rejects.toMatchObject({ code: "42501" });
+  });
+  it.each([
+    [change(), change()],
+    [change(ids.child, "excused", 0, "x".repeat(201))],
+    [change(ids.child, "present", 0, "Reason on wrong status")],
+    [],
+  ])("rejects invalid or duplicated batch input", async (...changes) => {
+    await as(ids.coach);
+    await expect(save(changes)).rejects.toMatchObject({ code: "22023" });
+  });
+});
+
+describe("internal player and training notes", () => {
+  async function addNote(
+    player: string | null = ids.child,
+    event: string | null = null,
+    body = "Precvičiť príjem podania.",
+  ) {
+    return (
+      await db.query<{
+        id: string;
+        body: string;
+        version: number;
+        author_id: string;
+        author_name: string;
+      }>(
+        "insert into public.internal_notes(player_id,event_id,body) values($1,$2,$3) returning *",
+        [player, event, body],
+      )
+    ).rows[0];
+  }
+  async function page(
+    player: string | null = ids.child,
+    event: string | null = null,
+    cursor?: { created_at: string; id: string },
+  ) {
+    return notesPageSchema.parse(
+      (
+        await db.query<{ data: unknown }>(
+          "select public.internal_notes_page($1,$2,$3,$4) as data",
+          [player, event, cursor?.created_at ?? null, cursor?.id ?? null],
+        )
+      ).rows[0].data,
+    );
+  }
+
+  it("creates both contexts with server authorship, records corrections and rejects stale edits", async () => {
+    await as(ids.coach);
+    const note = await addNote();
+    await addNote(null, ids.event);
+    expect(note).toMatchObject({
+      author_id: ids.coach,
+      author_name: "Fixture coach",
+      version: 1,
+    });
+    expect((await page()).items[0].can_edit).toBe(true);
+    expect((await page(null, ids.event)).items).toHaveLength(1);
+    const updated = await db.query<{ version: number }>(
+      "update public.internal_notes set body='Upravený tréningový cieľ.' where id=$1 and version=1 returning version",
+      [note.id],
+    );
+    expect(updated.rows[0].version).toBe(2);
+    expect(
+      (
+        await db.query(
+          "update public.internal_notes set body='Stará verzia' where id=$1 and version=1 returning id",
+          [note.id],
+        )
+      ).rows,
+    ).toHaveLength(0);
+    expect(await count("audit_logs")).toBe(0);
+    await as(ids.admin);
+    await db.query(
+      "update public.internal_notes set body='Oprava správcom.' where id=$1",
+      [note.id],
+    );
+    const audit = await db.query<{ old_body: string; new_body: string }>(
+      "select old_data->>'body' as old_body,new_data->>'body' as new_body from public.audit_logs where table_name='internal_notes' and record_id=$1 and operation='UPDATE' order by created_at,id",
+      [note.id],
+    );
+    expect(audit.rows).toHaveLength(2);
+    expect(
+      audit.rows.some(
+        (r) =>
+          r.old_body === "Upravený tréningový cieľ." &&
+          r.new_body === "Oprava správcom.",
+      ),
+    ).toBe(true);
+  });
+
+  it.each(["child", "parent", "stranger", "inactive"] as const)(
+    "hides notes from %s, including direct RPC reads",
+    async (role) => {
+      await as(ids.coach);
+      await addNote();
+      await addNote(null, ids.event);
+      await as(ids[role]);
+      expect(await count("internal_notes")).toBe(0);
+      expect(await page()).toEqual({
+        can_write: false,
+        items: [],
+        has_more: false,
+      });
+      expect((await page(null, ids.event)).items).toHaveLength(0);
+    },
+  );
+
+  it.each(["child", "parent", "stranger", "inactive"] as const)(
+    "rejects writes by %s",
+    async (role) => {
+      await as(ids[role]);
+      await expect(addNote()).rejects.toThrow();
+    },
+  );
+
+  it("allows other assigned coaches to read, but only the author or admin can edit", async () => {
+    await as(ids.coach);
+    const note = await addNote();
+    await as(ids.admin);
+    await db.query("insert into public.user_roles values($1,'coach')", [
+      ids.adult,
+    ]);
+    await db.query(
+      "insert into public.team_memberships values($1,$2,'coach')",
+      [ids.team, ids.adult],
+    );
+    await as(ids.adult);
+    expect((await page()).items[0].can_edit).toBe(false);
+    expect(
+      (
+        await db.query(
+          "update public.internal_notes set body='Cudzia úprava' where id=$1 returning id",
+          [note.id],
+        )
+      ).rows,
+    ).toHaveLength(0);
+    expect((await page()).items[0].body).toBe(note.body);
+  });
+
+  it.each(["membership", "role", "active"] as const)(
+    "revokes the author's access immediately after changing %s",
+    async (change) => {
+      await as(ids.coach);
+      const note = await addNote();
+      await addNote(null, ids.event);
+      await as(ids.admin);
+      if (change === "membership")
+        await db.query(
+          "delete from public.team_memberships where profile_id=$1",
+          [ids.coach],
+        );
+      if (change === "role")
+        await db.query("delete from public.user_roles where profile_id=$1", [
+          ids.coach,
+        ]);
+      if (change === "active")
+        await db.query("update public.profiles set active=false where id=$1", [
+          ids.coach,
+        ]);
+      await as(ids.coach);
+      expect((await page()).can_write).toBe(false);
+      expect(await count("internal_notes")).toBe(0);
+      expect(
+        (
+          await db.query(
+            "update public.internal_notes set body='Stratený prístup' where id=$1 returning id",
+            [note.id],
+          )
+        ).rows,
+      ).toHaveLength(0);
+    },
+  );
+
+  it("denies a coach access to unrelated players and teams", async () => {
+    await as(ids.admin);
+    await addNote(ids.stranger);
+    await addNote(null, ids.otherEvent);
+    await as(ids.coach);
+    expect((await page(ids.stranger)).can_write).toBe(false);
+    expect((await page(null, ids.otherEvent)).items).toHaveLength(0);
+    await expect(addNote(ids.stranger)).rejects.toThrow();
+  });
+
+  it.each(["body-empty", "body-long", "both", "neither", "nonplayer", "match"])(
+    "rejects invalid context/content: %s",
+    async (scenario) => {
+      await as(ids.admin);
+      if (scenario === "match")
+        await db.query("update public.events set kind='match' where id=$1", [
+          ids.event,
+        ]);
+      await expect(
+        addNote(
+          scenario === "neither" || scenario === "match"
+            ? null
+            : scenario === "nonplayer"
+              ? ids.coach
+              : ids.child,
+          scenario === "both" || scenario === "match" ? ids.event : null,
+          scenario === "body-empty"
+            ? " \n\t "
+            : scenario === "body-long"
+              ? "x".repeat(4001)
+              : "Poznámka",
+        ),
+      ).rejects.toThrow();
+    },
+  );
+
+  it.each([
+    "player_id",
+    "event_id",
+    "author_id",
+    "version",
+    "created_at",
+    "author_name",
+  ])("protects note provenance: %s", async (column) => {
+    await as(ids.coach);
+    const note = await addNote();
+    await expect(
+      db.query(
+        `update public.internal_notes set ${column}=${column} where id=$1`,
+        [note.id],
+      ),
+    ).rejects.toThrow();
+  });
+
+  it("cannot forge an author or erase a note, even as admin", async () => {
+    await as(ids.admin);
+    expect(
+      (
+        await db.query<{ allowed: boolean }>(
+          "select has_table_privilege('authenticated','public.internal_notes','DELETE') as allowed",
+        )
+      ).rows[0].allowed,
+    ).toBe(false);
+    await expect(
+      db.query(
+        "insert into public.internal_notes(player_id,body,author_id) values($1,'Falošný autor',$2)",
+        [ids.child, ids.coach],
+      ),
+    ).rejects.toThrow();
+  });
+
+  it("paginates all notes with bounded pages and no duplicates", async () => {
+    await as(ids.coach);
+    await db.query(
+      "insert into public.internal_notes(player_id,body) select $1,'Poznámka '||n from generate_series(1,27) n",
+      [ids.child],
+    );
+    const first = await page();
+    expect(first.items).toHaveLength(25);
+    expect(first.has_more).toBe(true);
+    const second = await page(ids.child, null, first.items.at(-1));
+    expect(second.items).toHaveLength(2);
+    expect(second.has_more).toBe(false);
+    expect(
+      new Set([...first.items, ...second.items].map((n) => n.id)).size,
+    ).toBe(27);
+  });
+
+  it("does not expose notes or helper RPCs to anonymous users", async () => {
+    const permissions = await db.query<{ allowed: boolean }>(
+      "select has_function_privilege('anon',p.oid,'execute') as allowed from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname in ('public','private') and p.proname in ('can_access_internal_notes','internal_notes_page','guard_internal_note')",
+    );
+    expect(permissions.rows.every((r) => !r.allowed)).toBe(true);
+    await db.exec("set role anon");
+    await expect(
+      db.query("select * from public.internal_notes"),
+    ).rejects.toThrow();
+  });
+});
+
+describe("player dashboard response reads", () => {
+  async function upcomingFor(profileId: string) {
+    // Same bounded, caller-RLS reads as the server dashboard; no privileged RPC.
+    const events = (
+      await db.query<{ id: string; team_id: string; status: string }>(
+        "select id,team_id,status from public.events where status='scheduled' and starts_at >= '2026-10-01' order by starts_at,id limit 5",
+      )
+    ).rows;
+    const memberships = (
+      await db.query<{ team_id: string }>(
+        "select team_id from public.team_memberships where profile_id=$1 and kind='player' and team_id=any($2::uuid[])",
+        [profileId, events.map((e) => e.team_id)],
+      )
+    ).rows;
+    const responses = (
+      await db.query(
+        "select event_id,response from public.availability where player_id=$1 and event_id=any($2::uuid[])",
+        [profileId, events.map((e) => e.id)],
+      )
+    ).rows;
+    return withPlayerResponses(
+      events,
+      memberships.map((m) => m.team_id),
+      playerResponsesSchema.parse(responses),
+    );
+  }
+
+  it("shows a player's own answer without confusing it with a sibling's answer", async () => {
+    await as(ids.sibling);
+    await db.query(
+      "insert into public.availability(event_id,player_id,response) values($1,$2,'no')",
+      [ids.event, ids.sibling],
+    );
+    await as(ids.child);
+    expect(await upcomingFor(ids.child)).toEqual([
+      {
+        id: ids.event,
+        team_id: ids.team,
+        status: "scheduled",
+        own_response: "pending",
+      },
+    ]);
+    await db.query(
+      "insert into public.availability(event_id,player_id,response) values($1,$2,'maybe')",
+      [ids.event, ids.child],
+    );
+    expect((await upcomingFor(ids.child))[0].own_response).toBe("maybe");
+  });
+
+  it("scopes combined coach/player roles and immediately respects revocation and deactivation", async () => {
+    await as(ids.admin);
+    await db.query("insert into public.user_roles values($1,'player')", [
+      ids.coach,
+    ]);
+    await db.query(
+      "insert into public.team_memberships values($1,$2,'player')",
+      [ids.other, ids.coach],
+    );
+    await as(ids.coach);
+    await db.query(
+      "insert into public.availability(event_id,player_id,response) values($1,$2,'yes')",
+      [ids.otherEvent, ids.coach],
+    );
+    await as(ids.coach);
+    const combined = await upcomingFor(ids.coach);
+    expect(
+      combined.find((e) => e.id === ids.event)?.own_response,
+    ).toBeUndefined();
+    expect(combined.find((e) => e.id === ids.otherEvent)?.own_response).toBe(
+      "yes",
+    );
+    await as(ids.admin);
+    await db.query(
+      "delete from public.team_memberships where profile_id=$1 and kind='player'",
+      [ids.coach],
+    );
+    await as(ids.coach);
+    expect(await upcomingFor(ids.coach)).toEqual([
+      {
+        id: ids.event,
+        team_id: ids.team,
+        status: "scheduled",
+        own_response: undefined,
+      },
+    ]);
+    await as(ids.admin);
+    await db.query("update public.profiles set active=false where id=$1", [
+      ids.coach,
+    ]);
+    await as(ids.coach);
+    expect(await upcomingFor(ids.coach)).toEqual([]);
+  });
 });
 
 describe("PostgreSQL row-level authorization", () => {
@@ -1661,7 +2755,7 @@ describe("PostgreSQL row-level authorization", () => {
     expect(
       (
         await db.query<{ birth_date: string }>(
-          "select birth_date::text from public.member_details",
+          "select public.member_private_details(private.viewer())->>'birth_date' as birth_date",
         )
       ).rows[0].birth_date,
     ).toBe("2012-01-01");

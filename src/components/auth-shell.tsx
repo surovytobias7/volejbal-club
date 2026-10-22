@@ -1,26 +1,27 @@
-import { Volleyball } from "lucide-react";
 import type { ReactNode } from "react";
+import { ClubIdentity } from "@/components/club-identity";
 export function AuthShell({ children }: { children: ReactNode }) {
   return (
     <div className="auth-shell">
       <section className="auth-art">
-        <div className="brand">
-          <span className="brand-symbol">
-            <Volleyball size={28} />
-          </span>
-          <span>
-            Volej klub<small>Klubový priestor</small>
-          </span>
+        <div className="auth-identity">
+          <ClubIdentity />
         </div>
-        <div className="court" aria-hidden />
-        <div>
-          <h1>Silný tím začína spolu.</h1>
+        <div className="auth-story">
+          <h2 className="auth-headline">
+            Spolu na ihrisku.
+            <br />
+            Aj mimo neho.
+          </h2>
           <p>
-            Tréningy, zápasy a všetko medzi nimi. Váš klub má konečne spoločný
-            priestor.
+            Tréningy, zápasy a klubový život. Spoločný priestor pre hráčov,
+            rodičov, trénerov a vedenie klubu.
           </p>
+          <div className="auth-signature" aria-hidden="true" />
         </div>
-        <small>Spolu na ihrisku aj mimo neho.</small>
+        <small className="auth-club-caption">
+          Školský športový klub · Bratislava
+        </small>
       </section>
       <main className="auth-form-area">
         <div className="auth-form-card">{children}</div>

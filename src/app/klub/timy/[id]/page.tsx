@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { AttendanceSessions } from "@/features/attendance-sessions";
 import Link from "next/link";
 import { Pagination } from "@/components/pagination";
 import { Button } from "@/components/ui/button";
@@ -32,7 +33,14 @@ export default async function Team({
     ? one(await v.db.from("club_settings").select("categories").single())
         .categories
     : [];
-  const team = one(await v.db.from("teams").select("*").eq("id", id).single());
+  const teamResult = await v.db
+    .from("teams")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  if (teamResult.error) throw new Error("Tím sa nepodarilo načítať.");
+  if (!teamResult.data) notFound();
+  const team = teamResult.data;
   const search = await searchParams;
   const q = directoryQuery(search);
   const baseCursor = directoryCursor(search);
@@ -84,24 +92,39 @@ export default async function Team({
       />
       <div className="two-columns">
         <div className="stack">
+          <AttendanceSessions teamId={id} />
           <Panel title="Najbližší program">
             <EventList events={events} />
           </Panel>
-          <Panel title="Členovia tímu">
+          <Panel
+            title={
+              v.roles.some((r) => r === "admin" || r === "coach")
+                ? "Členovia tímu"
+                : "Vaše členstvá v tíme"
+            }
+          >
             {memberships.length ? (
               <div className="data-table-wrap">
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>Meno</th>
-                      <th>Úloha</th>
-                      {admin && <th>Správa</th>}
+                <table className="data-table responsive-table" role="table">
+                  <thead role="rowgroup">
+                    <tr role="row">
+                      <th scope="col" role="columnheader">
+                        Meno
+                      </th>
+                      <th scope="col" role="columnheader">
+                        Úloha
+                      </th>
+                      {admin && (
+                        <th scope="col" role="columnheader">
+                          Správa
+                        </th>
+                      )}
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody role="rowgroup">
                     {memberships.map((m) => (
-                      <tr key={`${m.profile_id}-${m.kind}`}>
-                        <td>
+                      <tr role="row" key={`${m.profile_id}-${m.kind}`}>
+                        <td role="cell" data-label="Meno">
                           <Link
                             className="text-link"
                             href={`/klub/clenovia/${m.profile_id}`}
@@ -109,13 +132,13 @@ export default async function Team({
                             {m.full_name}
                           </Link>
                         </td>
-                        <td>
+                        <td role="cell" data-label="Úloha">
                           <span className="badge">
                             {m.kind === "coach" ? "Tréner" : "Hráč"}
                           </span>
                         </td>
                         {admin && (
-                          <td>
+                          <td role="cell" data-label="Správa">
                             <ActionForm
                               action={mutate}
                               hidden={{

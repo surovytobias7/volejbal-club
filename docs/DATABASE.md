@@ -1,3 +1,11 @@
+# Zmeny kontraktu — 22. 10. 2026
+
+Lokálne migrácie `20261022081940_access_integrity.sql` a `20261022081942_private_fields_and_access_context.sql` nadväzujú na pôvodných 18 migrácií. Celý reťazec prešiel v PGlite; aktuálne 19 RLS tabuliek a 26 verejných RPC. Hosted aplikovanie čaká na overenie histórie (`npm run db:status`, aktuálne Management HTTP 401).
+
+`profiles.user_id`, `member_details.birth_date` a `announcements.recipient_ids` nemajú všeobecný SELECT grant. Nepoužívať `select('*')` na týchto troch tabuľkách ani filtrovanie cez skryté stĺpce. Identita ide cez `viewer_context()`, údaje cez oprávnené `member_private_details(uuid)`, prepojenie účtu cez admin-only `link_member_account(uuid,uuid)` a mená v audite cez bounded admin-only `audit_actor_names(uuid[])`. `member_page` vracia `account_linked` iba administrátorovi. `announcement_page` vracia `audience` a adresátov iba správcovi publika; `can_manage_announcement(uuid)` preveruje aktuálny rozsah pre Server Actions. Definer implementácie sú v súkromnej schéme, s prázdnym search_path a explicitnou autorizáciou; verejné wrappery sú invoker.
+
+Nové migrácie nemenia ani nemažú existujúce záznamy. Obmedzujú nepoužívané DELETE oprávnenia, odstraňujú iba duplicitný auditný trigger, chránia väzby udalosti/účasti a databázové časové/autorové údaje. Server-only rozhodnutia o administrátorskej role sú pre výkon uložené iba počas SQL statementu, nikdy medzi požiadavkami. Staršie migrácie neupravovať ani naslepo opakovať.
+
 # Database
 
 ## Entities

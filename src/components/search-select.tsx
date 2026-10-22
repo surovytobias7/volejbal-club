@@ -72,7 +72,7 @@ export function SearchSelect({
   }
   return (
     <fieldset
-      className="field rounded-xl border border-slate-200 p-3"
+      className="field search-select"
       aria-describedby={error ? `${id}-error` : undefined}
     >
       <legend className="px-1 font-semibold">{label}</legend>
@@ -101,9 +101,12 @@ export function SearchSelect({
       <div className="flex gap-2">
         <input
           id={id}
+          aria-invalid={!!error}
+          aria-describedby={error ? `${id}-error` : undefined}
           value={query}
           maxLength={160}
-          placeholder="Hľadať podľa mena alebo názvu"
+          placeholder="Meno alebo názov…"
+          autoComplete="off"
           onChange={(e) => {
             setQuery(e.target.value);
             setMore(false);

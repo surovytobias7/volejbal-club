@@ -1,4 +1,6 @@
+import { ChargeTable, FinanceSummary } from "@/components/records";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { requireViewer } from "@/lib/auth";
 import { one } from "@/lib/data";
 import {
@@ -13,13 +15,14 @@ import { PageHeading, Panel, Empty } from "@/components/shared";
 import { ActionForm } from "@/components/forms";
 import { FormDialog } from "@/components/ui/dialog";
 import { mutate } from "@/features/actions";
-import { money, dateTime } from "@/lib/utils";
+import { dateTime } from "@/lib/utils";
 export default async function Payments({
   searchParams,
 }: {
   searchParams: FinanceSearch;
 }) {
   const v = await requireViewer();
+  if (!v.canFinance) notFound();
   const admin = v.roles.includes("admin");
   const cursor = financeCursor(await searchParams, "charges");
   const [summaryResult, pageResult] = await Promise.all([
@@ -80,77 +83,10 @@ export default async function Payments({
           )
         }
       />
-      <div className="dashboard-stats">
-        <div className="stat">
-          <span className="muted">Predpísané členské</span>
-          <strong>{money(summary.charged)}</strong>
-          <small>Všetky dostupné poplatky</small>
-        </div>
-        <div className="stat">
-          <span className="muted">Uhradené</span>
-          <strong>{money(summary.paid)}</strong>
-          <small>Podľa záznamov klubu</small>
-        </div>
-        <div className="stat">
-          <span className="muted">Zostáva uhradiť</span>
-          <strong>{money(summary.remaining)}</strong>
-          <small>Vrátane čiastočných úhrad</small>
-        </div>
-        <div className="stat">
-          <span className="muted">Po splatnosti</span>
-          <strong>{money(summary.overdue)}</strong>
-          <small>Neuhradené k dnešnému dňu</small>
-        </div>
-      </div>
+      <FinanceSummary summary={summary} />
       <Panel title="Členské poplatky">
         {records.length ? (
-          <div className="data-table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Hráč a poplatok</th>
-                  <th>Splatnosť</th>
-                  <th>Suma</th>
-                  <th>Zostáva</th>
-                  <th>Stav</th>
-                  <th>História</th>
-                </tr>
-              </thead>
-              <tbody>
-                {records.map((c) => (
-                  <tr key={c.id}>
-                    <td>
-                      <strong>{c.full_name}</strong>
-                      <small>{c.label}</small>
-                    </td>
-                    <td>{c.due_date.split("-").reverse().join(". ")}</td>
-                    <td>{money(c.amount_cents)}</td>
-                    <td>
-                      <strong>{money(c.remaining)}</strong>
-                    </td>
-                    <td>
-                      <span
-                        className={`badge ${c.remaining === 0 ? "success" : c.due_date < today ? "danger" : "match"}`}
-                      >
-                        {c.remaining === 0
-                          ? "Uhradené"
-                          : c.due_date < today
-                            ? "Po splatnosti"
-                            : c.remaining < c.amount_cents
-                              ? "Čiastočne uhradené"
-                              : "Čaká na úhradu"}
-                      </span>
-                    </td>
-                    <td>
-                      <Link className="text-link" href={`/klub/platby/${c.id}`}>
-                        Detail
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ChargeTable records={records} today={today} />
         ) : (
           <Empty
             title="Žiadne dostupné poplatky"

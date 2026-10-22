@@ -2,7 +2,7 @@
 import { Button } from "@/components/ui/button";
 export default function ErrorPage({ reset }: { reset: () => void }) {
   return (
-    <div className="empty-state">
+    <div className="empty-state error-state" role="alert">
       <h1>Údaje sa nepodarilo načítať</h1>
       <p className="muted">
         Skontrolujte pripojenie a skúste to znova. Ak problém pretrváva,

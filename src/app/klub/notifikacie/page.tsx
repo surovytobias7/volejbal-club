@@ -57,6 +57,7 @@ export default async function Notifications({
                   hidden={{ command: "read-notification", id: n.id }}
                   fields={[]}
                   submit="Označiť ako prečítané"
+                  variant="secondary"
                 />
               )}
             </article>

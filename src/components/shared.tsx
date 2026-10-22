@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { ArrowUpRight, CalendarDays, MapPin, Volleyball } from "lucide-react";
+import { ArrowRight, ArrowUpRight, CalendarDays, MapPin } from "lucide-react";
 import type { ReactNode } from "react";
 import { dateTime } from "@/lib/utils";
+import { ownResponseLabels, type OwnResponse } from "@/lib/player-dashboard";
 export function PageHeading({
   title,
   description,
@@ -30,9 +31,6 @@ export function Empty({
 }) {
   return (
     <div className="empty-state">
-      <span className="empty-icon">
-        <Volleyball size={30} strokeWidth={1.4} />
-      </span>
       <h3>{title}</h3>
       <p className="muted">{description}</p>
     </div>
@@ -43,14 +41,16 @@ export function Panel({
   children,
   href,
   label = "Zobraziť všetko",
+  plain = false,
 }: {
   title: string;
   children: ReactNode;
   href?: string;
   label?: string;
+  plain?: boolean;
 }) {
   return (
-    <section className="panel">
+    <section className={`panel${plain ? " panel-plain" : ""}`}>
       <div className="panel-heading">
         <h2>{title}</h2>
         {href && (
@@ -85,15 +85,18 @@ export type EventRow = {
   score?: string | null;
   pending_count?: number;
   participant_count?: number;
+  own_response?: OwnResponse;
 };
 export function EventList({
   events,
   teams = {},
   preview = false,
+  showDate = true,
 }: {
   events: EventRow[];
   teams?: Record<string, string>;
   preview?: boolean;
+  showDate?: boolean;
 }) {
   if (!events.length)
     return (
@@ -107,14 +110,19 @@ export function EventList({
       {events.map((e) => (
         <Link
           className="event-row"
-          href={preview ? "/ukazka?view=kalendar" : `/klub/kalendar/${e.id}`}
+          href={
+            preview
+              ? `/ukazka?view=udalost&event=${e.id}`
+              : `/klub/kalendar/${e.id}${e.own_response ? "#odpovede" : ""}`
+          }
           key={e.id}
         >
-          <div className="event-date">
-            <strong>{dateTime(e.starts_at, "dd")}</strong>
-            <span>{dateTime(e.starts_at, "MMM")}</span>
-          </div>
-          <div className={`event-stripe ${e.kind}`} />
+          {showDate && (
+            <div className="event-date">
+              <strong>{dateTime(e.starts_at, "dd")}</strong>
+              <span>{dateTime(e.starts_at, "MMM")}</span>
+            </div>
+          )}
           <div className="event-info">
             <div className="event-meta">
               <span className={`badge ${e.kind}`}>{kindNames[e.kind]}</span>
@@ -135,19 +143,63 @@ export function EventList({
             <h3>{e.title}</h3>
             <p>
               <span>
-                <CalendarDays size={13} />
-                {dateTime(e.starts_at, "EEEE, HH:mm")} –{" "}
-                {dateTime(e.ends_at, "HH:mm")}
+                <CalendarDays size={13} aria-hidden />
+                {dateTime(
+                  e.starts_at,
+                  showDate ? "EEEE, HH:mm" : "HH:mm",
+                )} – {dateTime(e.ends_at, "HH:mm")}
               </span>
               <span>
-                <MapPin size={13} />
+                <MapPin size={13} aria-hidden />
                 {e.venue}
               </span>
             </p>
+            {e.status === "scheduled" && e.own_response && (
+              <span className={`event-response response-${e.own_response}`}>
+                {ownResponseLabels[e.own_response]}
+              </span>
+            )}
           </div>
-          <ArrowUpRight className="event-arrow" size={18} />
+          <ArrowUpRight className="event-arrow" size={18} aria-hidden />
         </Link>
       ))}
     </div>
+  );
+}
+
+export function TeamList({
+  teams,
+  preview = false,
+}: {
+  teams: {
+    id: string;
+    name: string;
+    category: string;
+    description: string | null;
+  }[];
+  preview?: boolean;
+}) {
+  return (
+    <ul className="team-list">
+      {teams.map((team) => (
+        <li key={team.id}>
+          <Link
+            className="team-row"
+            href={preview ? "/ukazka?view=tim" : `/klub/timy/${team.id}`}
+          >
+            <span className="team-category">{team.category}</span>
+            <div className="team-description">
+              <h2>{team.name}</h2>
+              <p>
+                {team.description || "Tréningy, hráči a tímové informácie."}
+              </p>
+            </div>
+            <span className="team-open">
+              Otvoriť tím <ArrowRight size={18} aria-hidden />
+            </span>
+          </Link>
+        </li>
+      ))}
+    </ul>
   );
 }

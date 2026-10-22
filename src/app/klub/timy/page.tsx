@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Volleyball, ArrowUpRight } from "lucide-react";
 import { requireViewer } from "@/lib/auth";
 import { one } from "@/lib/data";
 import { Pagination } from "@/components/pagination";
@@ -9,7 +8,7 @@ import {
   directoryHref,
   type DirectorySearch,
 } from "@/lib/directories";
-import { PageHeading, Empty } from "@/components/shared";
+import { PageHeading, Empty, TeamList } from "@/components/shared";
 import { ActionForm } from "@/components/forms";
 import { FormDialog } from "@/components/ui/dialog";
 import { mutate } from "@/features/actions";
@@ -63,34 +62,24 @@ export default async function Teams({
       />
       <div className="toolbar">
         <div className="tabs">
-          <Link href="/klub/timy" className={!archived ? "active" : ""}>
+          <Link
+            href="/klub/timy"
+            className={!archived ? "active" : ""}
+            aria-current={!archived ? "page" : undefined}
+          >
             Aktívne tímy
           </Link>
           <Link
             href="/klub/timy?archived=true"
             className={archived ? "active" : ""}
+            aria-current={archived ? "page" : undefined}
           >
             Archív
           </Link>
         </div>
       </div>
       {teams.length ? (
-        <div className="team-grid">
-          {teams.map((t) => (
-            <Link className="team-card" href={`/klub/timy/${t.id}`} key={t.id}>
-              <span className="team-card-icon">
-                <Volleyball size={26} />
-              </span>
-              <span className="badge">{t.category}</span>
-              <h2>{t.name}</h2>
-              <p>{t.description || "Tréningy, hráči a tímové informácie."}</p>
-              <div className="team-card-footer">
-                Otvoriť tím
-                <ArrowUpRight size={17} />
-              </div>
-            </Link>
-          ))}
-        </div>
+        <TeamList teams={teams} />
       ) : (
         <Empty
           title="Každý tím má svoj začiatok"

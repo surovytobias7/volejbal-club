@@ -41,7 +41,15 @@ try {
   const id = (label) => state.accounts[label].profileId;
   const insert = async (db, table, data) =>
     checked(
-      await db.from(table).insert(data).select("*").single(),
+      await db
+        .from(table)
+        .insert(data)
+        .select(
+          table === "announcements"
+            ? "id,team_id,title,body,author_id,author_name"
+            : "*",
+        )
+        .single(),
       `Insert ${table}`,
     );
   const child = checked(

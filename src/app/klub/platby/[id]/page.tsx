@@ -28,14 +28,16 @@ export default async function Charge({
   const { id } = await params;
   if (!z.uuid().safeParse(id).success) notFound();
   const v = await requireViewer();
+  if (!v.canFinance) notFound();
   const admin = v.roles.includes("admin");
-  const charge = one(
-    await v.db
-      .from("charges")
-      .select("*,profiles(full_name)")
-      .eq("id", id)
-      .single(),
-  );
+  const chargeResult = await v.db
+    .from("charges")
+    .select("*,profiles(full_name)")
+    .eq("id", id)
+    .maybeSingle();
+  if (chargeResult.error) throw new Error("Poplatok sa nepodarilo načítať.");
+  if (!chargeResult.data) notFound();
+  const charge = chargeResult.data;
   const search = await searchParams;
   const cursor = financeCursor(search, "payments");
   const adjustmentCursor = historyCursor({
@@ -77,7 +79,75 @@ export default async function Charge({
           "Členský poplatok"
         }
       />
-      <div className="two-columns">
+      <div className="two-columns charge-layout">
+        <Panel title="Prehľad poplatku">
+          <div className="panel-body">
+            <div className="metric-line">
+              <span>Predpísaná suma</span>
+              <strong>{money(charge.amount_cents)}</strong>
+            </div>
+            <div className="metric-line">
+              <span>Suma po opravách</span>
+              <strong>{money(charged)}</strong>
+            </div>
+            <div className="metric-line">
+              <span>Zostáva uhradiť</span>
+              <strong>{money(remaining)}</strong>
+            </div>
+            <div className="metric-line">
+              <span>Obdobie</span>
+              <strong>
+                {feePeriodLabel(charge.period_start, charge.period_end)}
+              </strong>
+            </div>
+            <div className="metric-line">
+              <span>Splatnosť</span>
+              <strong>{charge.due_date.split("-").reverse().join(". ")}</strong>
+            </div>
+            {admin && remaining > 0 && (
+              <ActionForm
+                action={mutate}
+                hidden={{ command: "payment", charge_id: id }}
+                fields={[
+                  {
+                    name: "amount_cents",
+                    label: "Prijatá suma v EUR",
+                    value: (remaining / 100).toFixed(2),
+                  },
+                  {
+                    name: "note",
+                    label: "Poznámka k úhrade",
+                    hint: "Napríklad dátum prijatia a variabilný symbol.",
+                  },
+                ]}
+                submit="Zaevidovať úhradu"
+              />
+            )}
+            {admin && (
+              <FormDialog
+                title="Opraviť poplatok"
+                variant="secondary"
+                description="Zadajte novú celkovú sumu, nie rozdiel. Pôvodný predpis zostane zachovaný. Sumu nemožno znížiť pod prijaté úhrady; najprv stornujte nesprávnu platbu."
+              >
+                <ActionForm
+                  action={mutate}
+                  hidden={{ command: "adjust-charge", charge_id: id }}
+                  fields={[
+                    {
+                      name: "new_total_cents",
+                      label: "Nová celková suma v EUR",
+                      value: (charged / 100).toFixed(2),
+                      hint: "Nula zruší neuhradený predpis.",
+                    },
+                    { name: "note", label: "Dôvod opravy", type: "textarea" },
+                  ]}
+                  submit="Zaznamenať opravu"
+                  danger
+                />
+              </FormDialog>
+            )}
+          </div>
+        </Panel>
         <Panel title="História platieb">
           {payments.length ? (
             payments.map((p) => (
@@ -130,73 +200,6 @@ export default async function Charge({
                 : undefined
             }
           />
-        </Panel>
-        <Panel title="Prehľad poplatku">
-          <div className="panel-body">
-            <div className="metric-line">
-              <span>Predpísaná suma</span>
-              <strong>{money(charge.amount_cents)}</strong>
-            </div>
-            <div className="metric-line">
-              <span>Suma po opravách</span>
-              <strong>{money(charged)}</strong>
-            </div>
-            <div className="metric-line">
-              <span>Zostáva uhradiť</span>
-              <strong>{money(remaining)}</strong>
-            </div>
-            <div className="metric-line">
-              <span>Obdobie</span>
-              <strong>
-                {feePeriodLabel(charge.period_start, charge.period_end)}
-              </strong>
-            </div>
-            <div className="metric-line">
-              <span>Splatnosť</span>
-              <strong>{charge.due_date.split("-").reverse().join(". ")}</strong>
-            </div>
-            {admin && remaining > 0 && (
-              <ActionForm
-                action={mutate}
-                hidden={{ command: "payment", charge_id: id }}
-                fields={[
-                  {
-                    name: "amount_cents",
-                    label: "Prijatá suma v EUR",
-                    value: (remaining / 100).toFixed(2),
-                  },
-                  {
-                    name: "note",
-                    label: "Poznámka k úhrade",
-                    hint: "Napríklad dátum prijatia a variabilný symbol.",
-                  },
-                ]}
-                submit="Zaevidovať úhradu"
-              />
-            )}
-            {admin && (
-              <FormDialog
-                title="Opraviť poplatok"
-                description="Zadajte novú celkovú sumu, nie rozdiel. Pôvodný predpis zostane zachovaný. Sumu nemožno znížiť pod prijaté úhrady; najprv stornujte nesprávnu platbu."
-              >
-                <ActionForm
-                  action={mutate}
-                  hidden={{ command: "adjust-charge", charge_id: id }}
-                  fields={[
-                    {
-                      name: "new_total_cents",
-                      label: "Nová celková suma v EUR",
-                      value: (charged / 100).toFixed(2),
-                      hint: "Nula zruší neuhradený predpis.",
-                    },
-                    { name: "note", label: "Dôvod opravy", type: "textarea" },
-                  ]}
-                  submit="Zaznamenať opravu"
-                  danger
-                />
-              </FormDialog>
-            )}
-          </div>
         </Panel>
       </div>
       <div className="mt-6">

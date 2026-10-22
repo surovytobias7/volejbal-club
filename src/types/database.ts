@@ -70,23 +70,29 @@ export type Database = {
         Row: {
           event_id: string;
           player_id: string;
-          status: string;
+          status: string | null;
           updated_by: string;
           updated_at: string;
+          reason: string;
+          version: number;
         };
         Insert: {
           event_id: string;
           player_id: string;
-          status: string;
+          status?: string | null;
           updated_by?: string;
           updated_at?: string;
+          reason?: string;
+          version?: number;
         };
         Update: {
           event_id?: string;
           player_id?: string;
-          status?: string;
+          status?: string | null;
           updated_by?: string;
           updated_at?: string;
+          reason?: string;
+          version?: number;
         };
         Relationships: [
           {
@@ -477,6 +483,64 @@ export type Database = {
           },
         ];
       };
+      internal_notes: {
+        Row: {
+          id: string;
+          player_id: string | null;
+          event_id: string | null;
+          body: string;
+          author_id: string;
+          author_name: string;
+          created_at: string;
+          updated_at: string;
+          version: number;
+        };
+        Insert: {
+          id?: string;
+          player_id?: string | null;
+          event_id?: string | null;
+          body: string;
+          author_id?: string;
+          author_name?: string;
+          created_at?: string;
+          updated_at?: string;
+          version?: number;
+        };
+        Update: {
+          id?: string;
+          player_id?: string | null;
+          event_id?: string | null;
+          body?: string;
+          author_id?: string;
+          author_name?: string;
+          created_at?: string;
+          updated_at?: string;
+          version?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "internal_notes_player_id_fkey";
+            columns: ["player_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "internal_notes_event_id_fkey";
+            columns: ["event_id"];
+            isOneToOne: false;
+            referencedRelation: "events";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "internal_notes_author_id_fkey";
+            columns: ["author_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       member_details: {
         Row: {
           profile_id: string;
@@ -785,6 +849,7 @@ export type Database = {
         };
         Returns: Json;
       };
+      audit_actor_names: { Args: { p_ids: string[] | null }; Returns: Json };
       calendar_page: {
         Args: {
           p_from: string | null;
@@ -796,6 +861,14 @@ export type Database = {
           p_after_id: string | null;
         };
         Returns: Json;
+      };
+      can_access_internal_notes: {
+        Args: { p_player: string | null; p_event: string | null };
+        Returns: boolean;
+      };
+      can_manage_announcement: {
+        Args: { p_id: string | null };
+        Returns: boolean;
       };
       charge_page: {
         Args: { p_after_due: string | null; p_after_id: string | null };
@@ -840,6 +913,19 @@ export type Database = {
         Args: { p_at: string | null; p_after: string | null };
         Returns: Json;
       };
+      internal_notes_page: {
+        Args: {
+          p_player: string | null;
+          p_event: string | null;
+          p_before_at: string | null;
+          p_before_id: string | null;
+        };
+        Returns: Json;
+      };
+      link_member_account: {
+        Args: { p_id: string | null; p_user: string | null };
+        Returns: undefined;
+      };
       member_page: {
         Args: {
           p_query: string | null;
@@ -848,6 +934,7 @@ export type Database = {
         };
         Returns: Json;
       };
+      member_private_details: { Args: { p_id: string | null }; Returns: Json };
       payment_page: {
         Args: {
           p_charge_id: string | null;
@@ -857,6 +944,10 @@ export type Database = {
         Returns: Json;
       };
       refresh_my_reminders: { Args: Record<string, never>; Returns: number };
+      save_attendance: {
+        Args: { p_event: string | null; p_changes: Json | null };
+        Returns: Json;
+      };
       selector_options: {
         Args: {
           p_kind: string | null;
@@ -893,6 +984,7 @@ export type Database = {
         Args: { p_name: string | null; p_phone: string | null };
         Returns: undefined;
       };
+      viewer_context: { Args: Record<string, never>; Returns: Json };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
