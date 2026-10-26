@@ -1,4 +1,6 @@
-# Feature status - 2026-10-22
+# Feature status - 2026-10-26
+
+Aktuálne pokračovanie: **350/350 lokálnych testov v 19 súboroch**, TypeScript/ESLint a produkčný build na Next.js 16.4.2 prešli. Pozvánky majú overené lokálne chybové scenáre vrátane neurčitého výsledku služby, bezpečných chýb, kontroly identity, manuálneho prepojenia a auditu. Podrobnosti: [INVITATIONS.md](INVITATIONS.md). Doručenie SMTP a hosted obnova zostávajú otvorené. Graphify je aktualizovaný na súčasný kód, migrácie a dokumentáciu; ide o navigáciu, nie dôkaz živej akceptácie. Read-only história stále vracia **Management HTTP 401**; žiadne vzdialené migrácie ani e-maily. Lokálne zostáva 22 migrácií / 19 tabuliek / 27 RPC. Nasledujúce počty sú historické.
 
 Aktuálna integrácia: mobilná dochádzka a novšie bezpečnostné opravy fungujú spoločne; **296/296 lokálnych testov**. Odstránené konflikty, zachovaný súkromný kontext prístupu a verziované uloženie. Opravy histórie po odchode/deaktivácii hráča overené vrátane odobratia trénerstva. Lokálne **22 migrácií, 19 tabuliek, 27 RPC**. Štyri migrácie nad historickým živým základom čakajú na overenie histórie (Management HTTP 401) a nasadenie; hosted acceptance nie je potvrdené. Podrobnosti a záverečné kontroly sú v [PROGRESS.md](PROGRESS.md). Staršie počty a blokátory nižšie sú historické.
 

@@ -1,4 +1,8 @@
-# Zmeny kontraktu — 22. 10. 2026
+# Aktuálny kontrakt — 26. 10. 2026
+
+Lokálne **22 migrácií / 19 tabuliek / 27 verejných RPC**, vrátane verziovanej dochádzky a zjednotenej ochrany historických opráv. V tejto relácii nebola pridaná migrácia. Aktuálnu vzdialenú históriu blokuje Management HTTP 401; usporiadaná integračná brána je v [M4_LIVE_ACCEPTANCE.md](M4_LIVE_ACCEPTANCE.md). Počty v historickom odseku nižšie predchádzajú integrácii dochádzky.
+
+# Zmeny kontraktu — 22. 10. 2026 (historicky)
 
 Lokálne migrácie `20261022081940_access_integrity.sql` a `20261022081942_private_fields_and_access_context.sql` nadväzujú na pôvodných 18 migrácií. Celý reťazec prešiel v PGlite; aktuálne 19 RLS tabuliek a 26 verejných RPC. Hosted aplikovanie čaká na overenie histórie (`npm run db:status`, aktuálne Management HTTP 401).
 

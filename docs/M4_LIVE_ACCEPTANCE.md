@@ -1,4 +1,10 @@
-# Pokračovanie 22. 10. 2026
+# Aktuálna brána — 26. 10. 2026
+
+Read-only `npm run db:status` opäť vracia **Management HTTP 401**. Lokálne je **22 migrácií / 19 tabuliek / 27 RPC**; aktuálna vzdialená história nie je potvrdená. Posledný historicky overený základ je 18 migrácií po `20261016090000`. Najprv obnoviť prístup a overiť usporiadaný prefix; potom aplikovať iba skutočne chýbajúce verzie v poradí `20261021201352`, `20261022081940`, `20261022081942`, `20261022184845`. Tento zoznam nie je náhradou kontroly histórie. Starší pokyn nižšie uvádzajúci iba dve migrácie je historický a nepatrí k aktuálnemu integrovanému stavu.
+
+Pozvánky: lokálna simulácia chýb a databázovej obnovy prešla; [INVITATIONS.md](INVITATIONS.md) určuje manuálny postup. Žiadna správa ani vzdialená mutácia sa pri tejto skúške nevykonala. Hosted Auth/PostgREST, SMTP, paralelné spojenia a prehliadačové mutácie zostávajú otvorené.
+
+# Historické pokračovanie 22. 10. 2026
 
 - Obnovený stav má 20 lokálnych migrácií; dve nové opravy auditu sa na hosted databázu neaplikovali. Posledná historicky potvrdená aplikovaná verzia je `20261016090000` (18 migrácií, 18. október). Aktuálna história **nie je potvrdená**.
 - `npm run live:check`: 11 úspešných kontrol. Pred zmenou kontraktu runnera `npm run test:live`: 64 úspešných kontrol pôvodného Auth/PostgREST rozhrania. Zachované sanitizované dôkazy: `test-results/live-preflight.json`, `test-results/live-accounts-before-access.json`.

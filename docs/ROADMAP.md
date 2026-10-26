@@ -1,6 +1,15 @@
 # Product UI roadmap
 
-Updated: 2026-10-22. It records the current implementation and redesign; it does not replace the live acceptance gates in M4_LIVE_ACCEPTANCE.md. PRODUCT.md and DESIGN.md hold the confirmed usage context and design rules.
+Updated: 2026-10-26. It records the current implementation and redesign; it does not replace the live acceptance gates in M4_LIVE_ACCEPTANCE.md. PRODUCT.md and DESIGN.md hold the confirmed usage context and design rules.
+
+## Aktuálne pokračovanie — pozvánky a Graphify
+
+- [x] Lokálna skúška čiastočného zlyhania pozvánky a opravy chýb: neistý výsledok služby, bezpečné výnimky, aktuálny neprepojený profil a overená identita. Manuálna obnova a hranice sú v [INVITATIONS.md](INVITATIONS.md).
+- [x] 28 nových serverových/PGlite prípadov; celkovo **350 testov**, check a build prešli. Závislosti zosúladené s existujúcim lockfilom (Next.js 16.4.2).
+- [x] Hlavný Graphify graf obnovený vrátane SQL migrácií a dokumentácie; zastarané architektúrne údaje opravené.
+- [ ] Hosted obnova pozvánky, SMTP a úplná akceptácia poznámok/dochádzky. Migračná história bola opäť zablokovaná HTTP 401; žiadny vzdialený zápis.
+
+Ďalší krok: obnoviť súkromný prístup k testovacej migračnej histórii a overiť presný usporiadaný prefix pred aplikovaním chýbajúcich migrácií. Nasledujúce míľniky a počty sú historické.
 
 Latest integration: resolved restored attendance/security conflicts, retained private viewer context, retired unversioned attendance writes and reconciled historical attendance correction guards. **296/296 local tests pass**, check and build pass on patched Next.js 16.4.2. Production dependency audit is clean; five development-only ESLint/braces findings remain. There are 22 local migrations and 27 RPCs. Four migrations above the historical 18-migration hosted baseline need confirmed remote history and ordered application; read-only inspection still returns Management HTTP 401. Next: hosted attendance/notes acceptance after restoring history access, and track the upstream development dependency fix. Earlier milestone counts below are historical.
 
@@ -42,7 +51,7 @@ Use a compact desktop navigation rail, an immediate next-event feature and dense
 
 1. Complete the remaining hosted notes matrix in INTERNAL_NOTES.md: editing/audit, second coach, current-role revocation, concurrent stale versions and mobile mutation UI. Local PGlite and interactive previews remain separate evidence.
 2. Continue remaining authenticated UI review: settings, notifications, fee details, family-link pagination and empty/error/loading states. Profile/training presentation has now been inspected at desktop/tablet/phone widths; full authenticated pages and real-device/screen-reader checks remain.
-3. Preserve check/test/build evidence per milestone. Existing root Graphify was reused for targeted navigation; it predates the new notes files, so inspect their current source directly or incrementally refresh when needed.
+3. Preserve check/test/build evidence per milestone. Root Graphify was refreshed on 26 October, including notes, attendance and SQL migrations. Confirm source locations after subsequent edits; graph structure is not live acceptance evidence.
 4. Follow-up acceptance: screen-reader/real mobile-device testing, complete live mutation matrix, invitation partial-failure rehearsal, SMTP delivery, backup restore and deployment checks remain distinct gates. Do not call the product production-ready based on visual checks.
 
 ## Navigation for the next session

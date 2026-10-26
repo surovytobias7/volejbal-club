@@ -6,7 +6,7 @@ One club, one modular Next.js application, one Supabase project. No tenants or s
 
 `src/lib/auth.ts` resolves the current active profile and additive database roles using a server-validated Auth identity. Roles never come from user-editable metadata. Private SQL predicate functions avoid policy recursion with restricted `SECURITY DEFINER`, an empty search path, fully qualified names, and identity derived from `auth.uid()`. Public transactional RPCs are security invokers. Self-profile editing uses a narrow private definer function that can update only the current member's name/phone.
 
-The server-only Auth admin client is isolated to invitations. Auth invitations and profile linking cannot be atomic; the UI distinguishes a delivery request from a successful link. Failure recovery is documented in README.
+The server-only Auth admin client is isolated to invitations. Auth invitations and profile linking cannot be atomic; the UI distinguishes unknown provider outcomes, accepted delivery requests and confirmed links. Failure recovery is documented in [INVITATIONS.md](INVITATIONS.md).
 
 ## Modules
 
@@ -32,10 +32,10 @@ The server-only Auth admin client is isolated to invitations. Auth invitations a
 
 ## Design
 
-Midnight navy `#112238`, athletic blue `#225bdf`, lime `#d5f36b`, white panels, cool background `#f4f6fa`. Manrope for readable UI; Barlow Condensed for athletic emphasis. Fonts are self-hosted packages with Slovak support. Icons: Lucide. Visual source: `src/app/globals.css`.
+Confirmed Bilíkova identity: blue `#252b80`, white `#ffffff`, red `#ce2637` and the original supplied logo. Manrope for readable UI; Barlow Condensed for athletic emphasis. Fonts are self-hosted packages with Slovak support. Icons: Lucide. Visual sources: `DESIGN.md`, `src/lib/club-brand.ts` and `src/app/globals.css`.
 
 Mobile uses an agenda calendar and a focus-managed navigation drawer. Forms have labels, pending states, live feedback, focused error summaries and per-field invalid states. Destructive membership/role/payment actions require confirmation. Reduced-motion styles and visible focus are included.
 
 ## Known scale limits
 
-Dashboard, financial and attendance statistics use RLS-protected SQL aggregates. Main directories, attendance, announcements, finance, notifications/audit and form selectors use bounded cursor pages. Calendar/filter queries, detail rosters, guardian-child display and the fee-plan overview still need scale-safe reads. See REQUIREMENTS_GAPS.md.
+Dashboard, financial and attendance statistics use RLS-protected SQL aggregates. Main directories, attendance, announcements, finance, notifications/audit and form selectors use bounded cursor pages. Calendar queries, detail rosters, guardian-child display and fee plans are also paginated. Representative hosted performance and independent concurrent sessions remain to verify. See REQUIREMENTS_GAPS.md.

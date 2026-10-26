@@ -201,43 +201,71 @@ export async function mutate(_: FormState, form: FormData): Promise<FormState> {
       case "invite": {
         admin();
         const id = uuid.parse(data.id);
-        const { data: profile, error } = await db
-          .from("profiles")
-          .select("id,active")
-          .eq("id", id)
-          .single();
-        check({ error });
-        const privateResult = await db.rpc("member_private_details", {
-          p_id: id,
-        });
-        check(privateResult);
-        const details = memberPrivateDetailsSchema.parse(privateResult.data);
-        if (!profile?.active || details.account_linked)
-          throw new Error("Účet už je prepojený alebo je neaktívny.");
-        const email = z.email().parse(details.email);
-        const env = publicEnvironment();
-        const key = process.env.SUPABASE_SECRET_KEY;
-        if (!env || !key)
-          throw new Error("Správca musí nastaviť serverový kľúč pre pozvánky.");
-        const privileged = createClient(env.url, key, {
-          auth: { autoRefreshToken: false, persistSession: false },
-        });
-        const { data: invite, error: inviteError } =
-          await privileged.auth.admin.inviteUserByEmail(email, {
-            redirectTo: `${appUrl()}/nove-heslo`,
+        let failureMessage =
+          "Údaje a oprávnenie na pozvanie sa nepodarilo overiť. Obnovte stránku a skúste to znova.";
+        try {
+          const { data: profile, error } = await db
+            .from("profiles")
+            .select("id,active")
+            .eq("id", id)
+            .single();
+          check({ error });
+          const privateResult = await db.rpc("member_private_details", {
+            p_id: id,
           });
-        if (inviteError || !invite.user)
-          throw new Error(
-            "Pozvánku sa nepodarilo odoslať. Skontrolujte e-mail, nastavenie doručovania a existujúci účet v Supabase.",
-          );
-        const linked = await db.rpc("link_member_account", {
-          p_id: id,
-          p_user: invite.user.id,
-        });
-        if (linked.error)
-          throw new Error(
-            "Pozvánka bola odoslaná, ale účet sa nepodarilo prepojiť. Správca musí dokončiť prepojenie podľa dokumentácie.",
-          );
+          check(privateResult);
+          const details = memberPrivateDetailsSchema.parse(privateResult.data);
+          if (!profile?.active || details.account_linked !== false)
+            return {
+              error:
+                "Účet už je prepojený, je neaktívny alebo prepojenie nemožno overiť.",
+            };
+          const parsedEmail = z.email().safeParse(details.email);
+          if (!parsedEmail.success)
+            return {
+              error:
+                "Najprv doplňte platný e-mail v kontaktných údajoch člena.",
+            };
+          const email = parsedEmail.data;
+          const env = publicEnvironment();
+          const key = process.env.SUPABASE_SECRET_KEY;
+          if (!env || !key)
+            return {
+              error: "Správca musí nastaviť serverový kľúč pre pozvánky.",
+            };
+          failureMessage =
+            "Správca musí overiť serverové nastavenia pozvánok a adresu aplikácie.";
+          const redirectTo = `${appUrl()}/nove-heslo`;
+          const privileged = createClient(env.url, key, {
+            auth: { autoRefreshToken: false, persistSession: false },
+          });
+          // A timeout can happen after Auth accepted the request. Do not retry or
+          // claim that no email/account was created, and never expose SDK errors.
+          failureMessage =
+            "Výsledok pozvania sa nepodarilo potvrdiť. Správca musí overiť účet v Supabase a nastavenie doručovania pred opakovaním pozvánky.";
+          const { data: invite, error: inviteError } =
+            await privileged.auth.admin.inviteUserByEmail(email, {
+              redirectTo,
+            });
+          const identity = z
+            .object({ id: uuid, email: z.email() })
+            .safeParse(invite?.user);
+          if (
+            inviteError ||
+            !identity.success ||
+            identity.data.email.toLowerCase() !== email.toLowerCase()
+          )
+            return { error: failureMessage };
+          failureMessage =
+            "Supabase prijal pozvánku, ale prepojenie účtu sa nepodarilo potvrdiť. Pozvánku neposielajte znova. Správca musí overiť prepojenie podľa postupu obnovy pozvánok.";
+          const linked = await db.rpc("link_member_account", {
+            p_id: id,
+            p_user: identity.data.id,
+          });
+          if (linked.error) return { error: failureMessage };
+        } catch {
+          return { error: failureMessage };
+        }
         revalidatePath("/klub", "layout");
         return {
           success: "Pozvánka bola odovzdaná službe Supabase na doručenie.",

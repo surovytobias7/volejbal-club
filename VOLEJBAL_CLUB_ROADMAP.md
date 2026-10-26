@@ -2,7 +2,9 @@
 
 **Verzia:** 1.2
 
-**Dátum:** 22. október 2026
+**Dátum:** 26. október 2026
+
+**Pokračovanie 26. októbra:** dokončená lokálna skúška čiastočne zlyhaných pozvánok a bezpečné chybové stavy; 350 testov, check a build prešli. Hlavný Graphify graf aktualizovaný vrátane SQL a aktuálnej dokumentácie. Migračná história testovacieho Supabase stále vracia HTTP 401; živá obnova pozvánok, SMTP a hosted poznámky/dochádzka zostávajú otvorené. Podrobnosti a hranice: `docs/PROGRESS.md`, `docs/INVITATIONS.md`. Nasledujúce staršie počty sú historické.
 
 **Projekt:** `surovytobias7/volejbal-club`  
 **Pracovné prostredie:** T3 Code / Codex, Next.js, TypeScript, Supabase, GitHub  
@@ -73,6 +75,8 @@ Aktualizácia integrácie 22. októbra: dochádzka a bezpečnostné opravy sú s
 ## ETAPA 3 — Supabase Auth, pozvánky a e-mailové doručovanie
 
 **Cieľ:** Reálne fungujúci proces pozvania, nastavenia a obnovenia hesla.
+
+- [x] Lokálne preskúšať čiastočné zlyhanie pozvánky a bezpečnú manuálnu obnovu prepojenia; 28 nových serverových/PGlite testov. Hosted doručenie a obnova zostávajú samostatnou bránou.
 
 - [ ] Dokončiť **SMTP** cez vybraného poskytovateľa (napr. Resend) a overenú doménu; doménu/DNS vyriešiť s klubom alebo majiteľom domény.
 - [ ] Overiť e-mailové šablóny `invite.html` a `recover.html`, správne bezpečné odkazy a TokenHash spracovanie.

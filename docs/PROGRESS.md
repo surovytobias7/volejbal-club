@@ -1,4 +1,17 @@
-# Progress - 2026-10-22
+# Progress - 2026-10-26
+
+## Pozvánky, lokálne overenie a aktualizácia Graphify — 26. október
+
+- Roadmapa a existujúci Graphify boli použité na orientáciu, následne overené aktuálnymi zdrojmi. Najbližšia hosted akceptácia zostáva blokovaná: opakované read-only `npm run db:status` vrátilo **Management HTTP 401**. Žiadny vzdialený zápis, migrácia ani e-mail sa nevykonali. Lokálna schéma má naďalej 22 migrácií / 19 tabuliek / 27 RPC; vzdialená história nie je potvrdená.
+- Dokončený ďalší nezávislý bod: **lokálna skúška čiastočného zlyhania pozvánok**. Nových 22 serverových testov na pôvodnom kóde odhalilo 9 neúspešných scenárov: interné výnimky, neurčitý stav prepojenia, neoverená identita a zavádzajúca informácia pri neistom výsledku služby. Opravený dispatcher vyžaduje výslovne neprepojený aktívny profil, kontakt z databázy a platnú Auth identitu so zhodným e-mailom. Rozlišuje chybu pred odoslaním, nepotvrdený výsledok Auth a nepotvrdené prepojenie po prijatí pozvánky. Výnimky SDK/DB sa nezobrazujú; odoslanie sa automaticky neopakuje.
+- Šesť nových PGlite prípadov overuje izoláciu nepripojenej identity, manuálne prepojenie a audit, jedinečnosť identity a odmietnutie po odobratí administrátorskej roly bez obnovy JWT. Pôvodná ochrana vlastnej administrátorskej roly najprv odhalila chybu testovacieho setupu; opravená simulácia odobratia oprávnenia nemení produkčné triggery. Nový [postup obnovy pozvánok](INVITATIONS.md) nahrádza príliš voľný pokyn na priamy prepis profilu v README.
+- Základ pracovného stromu obsahoval ďalšie testy nad historickým počtom 296. Záverečný výsledok je **350/350 testov v 19 súboroch**, vrátane 28 pridaných v tejto relácii. **`npm run check` a `npm run build` prešli.** Pôvodnú chybu inferencie `linkedRef = null` v migračnej diagnostike opravuje explicitný JSDoc typ; existujúce testy zostali zachované.
+- Lokálne `node_modules` mali Next.js 16.4.0 napriek lockfilu 16.4.2. `npm ci --no-audit --no-fund` obnovilo presné zamknuté závislosti so systémovými CA a bez vypnutia TLS. Záverečný build použil **16.4.2**. Manifest/lockfile nebol zmenený. Npm upozornilo na nepodporovanú verziu ESLint 9 a nepovolený install script `unrs-resolver`; existujúce upozornenie Vitest na CommonJS/ESM zostáva. Nový audit zraniteľností sa v tejto relácii nevykonal.
+- Na výslovnú žiadosť používateľa je obnovený hlavný `graphify-out/`: kód, SQL migrácie, aktuálne nadpisy/odkazy dokumentácie a overené súhrny. Doplnený lokálny SQL parser. Inkrementálne zlúčenie zachovalo staré dokumentové uzly označené ako AST; preto bol graf zosúladený s celým aktuálnym korpusom s využitím cache. JSON uchováva aj viac vzťahov medzi rovnakými uzlami; zhlukovanie používa jednoduchšiu projekciu. HTML, správa a manifest sú lokálne ignorované artefakty. Presné počty a limity sú v `graphify-out/GRAPH_REPORT.md`. Starý nesúvisiaci C# súbor má chybu syntaxe a zostal nedotknutý; SVG sú len metadáta súborov. Bez externého LLM a bez agentov; externé extrakčné tokeny 0, tokeny hlavnej relácie nie sú merané.
+- Opravené zastarané údaje o farbách a stránkovaní v ARCHITECTURE.md; zosúladené aktuálne počty a poradie migračných brán. Nejde o nové živé ani prehliadačové overenie. SMTP/doručenie, skutočný súbeh, hosted obnova pozvánky, poznámky/dochádzka a úplná mobilná akceptácia zostávajú otvorené.
+- **Ďalší krok:** súkromne obnoviť prístup k migračnej histórii testovacieho Supabase, overiť presný prefix a až potom pokračovať chýbajúcimi migráciami a hosted akceptáciou. Bez commitu, pushu alebo nasadenia.
+
+Nasledujú historické míľniky; ich počty nie sú aktuálnym výsledkom.
 
 ## Integrácia dochádzky a bezpečnostného auditu — 22. október
 

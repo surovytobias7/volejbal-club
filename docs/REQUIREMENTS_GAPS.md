@@ -1,4 +1,6 @@
-# Requirements gap analysis - 2026-10-19
+# Requirements gap analysis - 2026-10-26
+
+Aktualizácia: lokálna skúška čiastočného zlyhania pozvánok je dokončená (serverové chyby, overenie identity, nepripojený účet, oprávnená obnova a audit); hosted skúška a SMTP zostávajú otvorené. Celkovo 350 lokálnych testov, check a build prešli. Hlavný Graphify graf je obnovený. Aktuálnu migračnú históriu blokuje Management HTTP 401; aktuálne lokálne počty sú 22 migrácií / 19 tabuliek / 27 RPC. Staršie živé výsledky a počty nižšie sú historické. Podrobnosti: [PROGRESS.md](PROGRESS.md), [INVITATIONS.md](INVITATIONS.md).
 
 Refreshed against the preserved requirements assessment and latest implementation milestones. Graphify supplied navigation; targeted source inspection verified settings, dashboard, finance and scoped-profile details. This is not a new review of an earlier repository or a live acceptance claim.
 

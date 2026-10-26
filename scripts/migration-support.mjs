@@ -73,6 +73,9 @@ export function compareMigrationHistory(local, rows) {
   };
 }
 
+/**
+ * @param {{ env: Record<string, string | undefined>, local: string[], linkedRef?: string | null, request?: typeof fetch }} options
+ */
 export async function inspectMigrationHistory({
   env,
   local,

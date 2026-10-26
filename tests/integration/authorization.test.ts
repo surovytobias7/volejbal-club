@@ -370,6 +370,91 @@ describe("comprehensive access audit regressions", () => {
       ]),
     ).rejects.toThrow();
   });
+  it("keeps an orphan invitation isolated until an administrator reconciles it", async () => {
+    await db.query("insert into auth.users(id) values($1)", [uid(99)]);
+    await as(ids.admin);
+    const profile = (
+      await db.query<{ id: string }>(
+        "select public.create_member('Fiktívna pozvánka',null,null,null,'player') as id",
+      )
+    ).rows[0].id;
+    await as(uid(99));
+    expect(
+      (
+        await db.query<{ data: unknown }>(
+          "select public.viewer_context() as data",
+        )
+      ).rows[0].data,
+    ).toBeNull();
+    expect(await count("profiles")).toBe(0);
+    expect(await count("charges")).toBe(0);
+    await as(ids.admin);
+    await db.query("select public.link_member_account($1,$2)", [
+      profile,
+      uid(99),
+    ]);
+    const audit = await db.query<{ actor_id: string }>(
+      "select actor_id from public.audit_logs where table_name='profiles' and record_id=$1 and new_data->>'user_id'=$2",
+      [profile, uid(99)],
+    );
+    expect(audit.rows).toEqual([{ actor_id: ids.admin }]);
+    // Same Auth identity, no JWT refresh after reconciliation.
+    await as(uid(99));
+    const context = (
+      await db.query<{ data: { id: string; roles: string[] } }>(
+        "select public.viewer_context() as data",
+      )
+    ).rows[0].data;
+    expect(context).toMatchObject({ id: profile, roles: ["player"] });
+    expect(await count("profiles")).toBe(1);
+    expect(await count("charges")).toBe(0);
+  });
+  it.each(["coach", "parent", "inactive"] as const)(
+    "denies invitation reconciliation to %s",
+    async (role) => {
+      await as(ids[role]);
+      await expect(
+        db.query("select public.link_member_account($1,$2)", [
+          ids.child,
+          uid(99),
+        ]),
+      ).rejects.toThrow(/Administrator required/);
+    },
+  );
+  it("denies linking when the administrator role was revoked without JWT refresh", async () => {
+    await as(ids.admin);
+    await db.exec("reset role");
+    await db.query("select set_config('request.jwt.claim.sub',$1,false)", [
+      ids.coach,
+    ]);
+    await db.query("delete from public.user_roles where profile_id=$1", [
+      ids.admin,
+    ]);
+    await db.query("select set_config('request.jwt.claim.sub',$1,false)", [
+      ids.admin,
+    ]);
+    await db.exec("set role authenticated");
+    await expect(
+      db.query("select public.link_member_account($1,$2)", [
+        ids.child,
+        uid(99),
+      ]),
+    ).rejects.toThrow(/Administrator required/);
+  });
+  it("does not assign an existing Auth identity to a second profile", async () => {
+    await as(ids.admin);
+    const profile = (
+      await db.query<{ id: string }>(
+        "select public.create_member('Fiktívny duplikát',null,null,null,'player') as id",
+      )
+    ).rows[0].id;
+    await expect(
+      db.query("select public.link_member_account($1,$2)", [
+        profile,
+        ids.adult,
+      ]),
+    ).rejects.toThrow(/unique/);
+  });
   it("keeps the new public and private helpers inaccessible to anonymous callers", async () => {
     const { rows } = await db.query<{ allowed: boolean }>(
       "select has_function_privilege('anon',p.oid,'execute') as allowed from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname in ('public','private') and p.proname in ('viewer_context','member_private_details','member_account_linked','link_member_account','audit_actor_names','can_manage_announcement')",

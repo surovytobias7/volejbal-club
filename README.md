@@ -53,7 +53,7 @@ In Supabase Auth settings:
 3. Sign in at `/prihlasenie`. Update the administrator name and club settings.
 4. Create member profiles, grant the required roles, link parents to players, create teams and assign coaches/players. Invite only members who need their own login. Minors may participate through their guardian's account.
 
-Invitation creation and profile linking span Auth and the database and cannot be one transaction. If an email invitation was accepted by Supabase but profile linking fails, the app reports this explicitly. In the trusted SQL editor, verify the intended Auth identity and member, then set only that profile's `user_id`. Do not create duplicate people or roles to work around it. The Auth UUID is unique in `profiles`.
+Invitation creation and profile linking span Auth and the database and cannot be one transaction. The app distinguishes unknown provider outcomes from accepted invitations with unconfirmed linking. Verify the intended identity and actual link before retrying; use the current administrator's `link_member_account` RPC for reconciliation. Do not overwrite links or create duplicate people or roles. Follow [the invitation recovery runbook](docs/INVITATIONS.md).
 
 ## Checks
 
