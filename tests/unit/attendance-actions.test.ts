@@ -13,6 +13,7 @@ const query = {
   maybeSingle: vi.fn(),
 };
 const db = { from: vi.fn(() => query), rpc: vi.fn() };
+const abortSignal = vi.fn();
 const input = {
   event_id: uid(30),
   changes: [
@@ -47,7 +48,7 @@ beforeEach(() => {
     data: { profile_id: uid(2) },
     error: null,
   });
-  db.rpc.mockResolvedValue({
+  abortSignal.mockResolvedValue({
     data: [
       {
         player_id: uid(4),
@@ -59,6 +60,7 @@ beforeEach(() => {
     ],
     error: null,
   });
+  db.rpc.mockReturnValue({ abortSignal });
 });
 describe("attendance server authorization", () => {
   it.each(["player", "guardian"] as const)(
@@ -106,19 +108,22 @@ describe("attendance server authorization", () => {
     expect((await saveAttendance(input)).records).toHaveLength(1);
     expect(query.maybeSingle).toHaveBeenCalledTimes(1);
   });
-  it("returns a conflict without leaking database text or claiming persistence", async () => {
-    db.rpc.mockResolvedValue({
-      data: null,
-      error: { code: "40001", message: "private database detail" },
-    });
-    const result = await saveAttendance(input);
-    expect(result.conflict).toBe(true);
-    expect(result.error).not.toContain("private");
-    expect(result.records).toBeUndefined();
-    expect(revalidatePath).not.toHaveBeenCalled();
-  });
+  it.each(["PT409", "40001"])(
+    "returns conflict %s without leaking database text or claiming persistence",
+    async (code) => {
+      abortSignal.mockResolvedValue({
+        data: null,
+        error: { code, message: "private database detail" },
+      });
+      const result = await saveAttendance(input);
+      expect(result.conflict).toBe(true);
+      expect(result.error).not.toContain("private");
+      expect(result.records).toBeUndefined();
+      expect(revalidatePath).not.toHaveBeenCalled();
+    },
+  );
   it("does not claim persistence when RLS rejects revoked access after the server check", async () => {
-    db.rpc.mockResolvedValue({
+    abortSignal.mockResolvedValue({
       data: null,
       error: { code: "42501", message: "private database detail" },
     });
@@ -144,8 +149,52 @@ describe("attendance server authorization", () => {
       ],
     ].map((data) => ({ data })),
   )("requires a matching acknowledgement", async ({ data }) => {
-    db.rpc.mockResolvedValue({ data, error: null });
+    abortSignal.mockResolvedValue({ data, error: null });
     expect((await saveAttendance(input)).error).toBeTruthy();
+    expect(revalidatePath).not.toHaveBeenCalled();
+  });
+  it.each([
+    { status: "absent" },
+    { reason: "Unexpected reason" },
+    { version: 2 },
+  ])(
+    "rejects mismatched saved values or an older version %j",
+    async (override) => {
+      abortSignal.mockResolvedValue({
+        data: [
+          {
+            player_id: uid(4),
+            status: "present",
+            reason: "",
+            version: 4,
+            updated_at: "2026-10-26T12:00:00Z",
+            ...override,
+          },
+        ],
+        error: null,
+      });
+      const result = await saveAttendance({
+        ...input,
+        changes: [{ ...input.changes[0], expected_version: 3 }],
+      });
+      expect(result.error).toBeTruthy();
+      expect(revalidatePath).not.toHaveBeenCalled();
+    },
+  );
+  it("accepts an idempotent acknowledgement at the current version", async () => {
+    const result = await saveAttendance({
+      ...input,
+      changes: [{ ...input.changes[0], expected_version: 1 }],
+    });
+    expect(result.records).toHaveLength(1);
+  });
+  it("bounds the RPC and never confirms a timed-out write", async () => {
+    abortSignal.mockResolvedValue({ data: null, error: { code: "", message: "TimeoutError: private connection detail" } });
+    const result = await saveAttendance(input);
+    expect(abortSignal).toHaveBeenCalledWith(expect.any(AbortSignal));
+    expect(result.records).toBeUndefined();
+    expect(result.error).toBeTruthy();
+    expect(result.error).not.toContain("private connection");
     expect(revalidatePath).not.toHaveBeenCalled();
   });
 });

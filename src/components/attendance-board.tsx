@@ -49,6 +49,9 @@ export function AttendanceBoard({
   );
   const [query, setQuery] = useState("");
   const [onlyUnmarked, setOnlyUnmarked] = useState(false);
+  // Keep the row being edited visible until focus leaves it. Otherwise the
+  // unmarked filter removes an excused player before a reason can be entered.
+  const [activePlayer, setActivePlayer] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState<{ text: string; error?: boolean }>({
     text: "",
@@ -70,7 +73,9 @@ export function AttendanceBoard({
   const visible = players.filter(
     (p) =>
       normalize(p.full_name).includes(normalize(query)) &&
-      (!onlyUnmarked || drafts[p.profile_id]?.status === null),
+      (!onlyUnmarked ||
+        drafts[p.profile_id]?.status === null ||
+        p.profile_id === activePlayer),
   );
   const counts = { present: 0, absent: 0, late: 0, excused: 0, unmarked: 0 };
   for (const player of players)
@@ -110,6 +115,7 @@ export function AttendanceBoard({
   }, [dirty]);
 
   function mark(id: string, status: AttendanceStatus | null) {
+    setActivePlayer(id);
     setDrafts((current) => ({
       ...current,
       [id]: { status, reason: status === "excused" ? current[id].reason : "" },
@@ -158,6 +164,7 @@ export function AttendanceBoard({
         ),
       }));
       setBulkUndo(null);
+      setActivePlayer(null);
       setFeedback({
         text: preview
           ? "Ukážkové zmeny sú uložené iba v tomto náhľade."
@@ -273,6 +280,8 @@ export function AttendanceBoard({
             <span className="sr-only">Hľadať hráča v súpise</span>
             <input
               type="search"
+              name="attendance-search"
+              autoComplete="off"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Hľadať hráča"
@@ -291,9 +300,36 @@ export function AttendanceBoard({
           <Button
             type="button"
             variant="secondary"
+            disabled={busy || !counts.unmarked || conflict || review.length > 0}
+            onClick={() => {
+              setBulkUndo(drafts);
+              setActivePlayer(null);
+              setDrafts((current) =>
+                Object.fromEntries(
+                  players.map((p) => [
+                    p.profile_id,
+                    current[p.profile_id].status === null
+                      ? { status: "present", reason: "" }
+                      : current[p.profile_id],
+                  ]),
+                ),
+              );
+              setFeedback({
+                text: `Neoznačení hráči (${counts.unmarked}) sú prítomní. Ostatné označenia zostali zachované.`,
+              });
+            }}
+          >
+            <Check size={18} aria-hidden /> Neoznačení prítomní
+          </Button>
+        )}
+        {!readOnly && (
+          <Button
+            type="button"
+            variant="secondary"
             disabled={busy || !players.length || conflict || review.length > 0}
             onClick={() => {
               setBulkUndo(drafts);
+              setActivePlayer(null);
               setDrafts(
                 Object.fromEntries(
                   players.map((p) => [
@@ -325,10 +361,12 @@ export function AttendanceBoard({
           </Button>
         )}
       </div>
-      {query && (
-        <p className="muted attendance-search-count">
+      {(query || onlyUnmarked) && (
+        <p className="muted attendance-search-count" role="status">
           Zobrazení: {visible.length} z {players.length}. Hromadné označenie
           platí pre celý súpis.
+          {onlyUnmarked &&
+            " Rozpracovaný riadok zostáva viditeľný počas úpravy."}
         </p>
       )}
       <ul className="attendance-roster">
@@ -342,6 +380,11 @@ export function AttendanceBoard({
             <li
               key={player.profile_id}
               className={`attendance-player ${needsReview ? "attendance-review" : ""}`}
+              onFocusCapture={() => setActivePlayer(player.profile_id)}
+              onBlurCapture={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget))
+                  setActivePlayer(null);
+              }}
             >
               <div className="attendance-player-info">
                 <strong>{player.full_name}</strong>
@@ -396,6 +439,8 @@ export function AttendanceBoard({
                       Dôvod ospravedlnenia{" "}
                       <span className="muted">(nepovinné)</span>
                       <input
+                        name={`attendance-reason-${player.profile_id}`}
+                        autoComplete="off"
                         value={draft.reason}
                         maxLength={200}
                         disabled={busy}
@@ -516,7 +561,7 @@ export function AttendanceBoard({
           >
             {feedback.text}
           </div>
-          {conflict && (
+          {(conflict || feedback.error) && (
             <Button
               type="button"
               variant="secondary"

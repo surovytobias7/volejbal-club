@@ -18,6 +18,34 @@ const player = (index: number) => ({
   attendance_updated_at: null,
 });
 describe("complete attendance roster", () => {
+  it.each([
+    { items: [player(2)], total: 2, has_more: false, can_manage: false },
+    { items: [player(2)], total: 3, has_more: false, can_manage: true },
+    { items: [], total: 2, has_more: false, can_manage: true },
+    { items: [player(1)], total: 2, has_more: false, can_manage: true },
+  ])(
+    "rejects a changing scope, partial roster or duplicated page %j",
+    async (page) => {
+      const rpc = vi
+        .fn()
+        .mockResolvedValueOnce({
+          data: {
+            items: [player(1)],
+            total: 2,
+            has_more: true,
+            can_manage: true,
+          },
+          error: null,
+        })
+        .mockResolvedValueOnce({ data: page, error: null });
+      await expect(
+        loadEventRoster(
+          { rpc } as unknown as SupabaseClient<Database>,
+          uid(80),
+        ),
+      ).rejects.toThrow();
+    },
+  );
   it("loads players beyond the first 25 and preserves the cursor", async () => {
     const first = Array.from({ length: 25 }, (_, index) => player(index + 1));
     const rpc = vi

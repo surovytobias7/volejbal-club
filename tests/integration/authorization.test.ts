@@ -708,7 +708,7 @@ describe("coach attendance workflow", () => {
     await db.exec("savepoint stale_save");
     await expect(
       save([change(ids.child, "absent", 1), change(ids.sibling, "absent", 1)]),
-    ).rejects.toMatchObject({ code: "40001" });
+    ).rejects.toMatchObject({ code: "PT409" });
     await db.exec("rollback to savepoint stale_save");
     const page = await roster();
     expect(page.items.find((p) => p.profile_id === ids.child)?.attendance).toBe(

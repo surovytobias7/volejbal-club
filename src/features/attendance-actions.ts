@@ -67,12 +67,14 @@ export async function saveAttendance(
         error: "Dochádzku môžete zapisovať iba svojim prideleným tímom.",
       };
   }
-  const result = await db.rpc("save_attendance", {
-    p_event: parsed.data.event_id,
-    p_changes: parsed.data.changes,
-  });
+  const result = await db
+    .rpc("save_attendance", {
+      p_event: parsed.data.event_id,
+      p_changes: parsed.data.changes,
+    })
+    .abortSignal(AbortSignal.timeout(15000));
   if (result.error) {
-    if (result.error.code === "40001")
+    if (result.error.code === "PT409" || result.error.code === "40001")
       return {
         error:
           "Dochádzku medzitým upravil niekto iný. Vaše zmeny zostali rozpracované. Načítajte aktuálne záznamy a skontrolujte označených hráčov.",
@@ -88,7 +90,13 @@ export async function saveAttendance(
     !records.success ||
     records.data.length !== parsed.data.changes.length ||
     !parsed.data.changes.every((change) =>
-      records.data.some((record) => record.player_id === change.player_id),
+      records.data.some(
+        (record) =>
+          record.player_id === change.player_id &&
+          record.status === change.status &&
+          record.reason === change.reason &&
+          record.version >= change.expected_version,
+      ),
     )
   )
     return {
