@@ -1,4 +1,8 @@
-# Aktuálna brána — 26. 10. 2026
+# Aktuálna brána — 27. 10. 2026
+
+Management prístup je obnovený; **23 aplikovaných / 0 čakajúcich migrácií** potvrdených čítaním vzdialenej histórie. Živé preflight 11/11 a rolové kontroly 64/64 prešli 26. októbra. Nové mutačné skúšky a T3 trénerské/hráčske/rodičovské postupy z 27. októbra dokumentuje [LIVE_ATTENDANCE_NOTES.md](LIVE_ATTENDANCE_NOTES.md), vrátane pôvodného neúspešného očakávania testu a následného úspešného pokračovania 21/21. Nie je to úplné uzavretie M4; zostávajúce scenáre sú v tomto registri a roadmape. SMTP/doména, obnova pozvánky, zálohy a deployment ostávajú otvorené.
+
+# Historická brána — 26. 10. 2026
 
 Read-only `npm run db:status` opäť vracia **Management HTTP 401**. Lokálne je **22 migrácií / 19 tabuliek / 27 RPC**; aktuálna vzdialená história nie je potvrdená. Posledný historicky overený základ je 18 migrácií po `20261016090000`. Najprv obnoviť prístup a overiť usporiadaný prefix; potom aplikovať iba skutočne chýbajúce verzie v poradí `20261021201352`, `20261022081940`, `20261022081942`, `20261022184845`. Tento zoznam nie je náhradou kontroly histórie. Starší pokyn nižšie uvádzajúci iba dve migrácie je historický a nepatrí k aktuálnemu integrovanému stavu.
 

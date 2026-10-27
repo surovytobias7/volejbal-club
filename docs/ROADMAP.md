@@ -1,8 +1,21 @@
 # Product UI roadmap
 
-Updated: 2026-10-26. It records the current implementation and redesign; it does not replace the live acceptance gates in M4_LIVE_ACCEPTANCE.md. PRODUCT.md and DESIGN.md hold the confirmed usage context and design rules.
+Updated: 2026-10-27. It records the current implementation and redesign; it does not replace the live acceptance gates in M4_LIVE_ACCEPTANCE.md. PRODUCT.md and DESIGN.md hold the confirmed usage context and design rules.
 
-## Aktuálne pokračovanie — pozvánky a Graphify
+## Aktuálne pokračovanie — živá dochádzka a interné poznámky
+
+- [x] Obnovený Management prístup a overená vzdialená história: **23 aplikovaných / 0 čakajúcich migrácií**. Štyri pôvodne čakajúce migrácie sú aplikované a skontrolované; existujúca 23. migrácia sa neopakovala.
+- [x] Živé Auth/RLS mutácie: hromadná/atomická dochádzka, oddelená dostupnosť, história, súbeh, oba druhy poznámok, druhý tréner, admin audit a okamžitá revokácia. Presné reporty a limity v [LIVE_ATTENDANCE_NOTES.md](LIVE_ATTENDANCE_NOTES.md).
+- [x] Autentifikovaný T3: trénerské uloženie, mobilná úprava tréningovej poznámky a reload; osobný/rodinný pohľad a odmietnutie členského adresára. Opravená anglická 404.
+- [x] Lokálna sada **360 testov** a produkčný build; Zod opravený a audit bez zraniteľností pri overení 26. októbra.
+- [ ] Zvyšná akceptácia poznámok: živé stránkovanie/dlhý text, výpadok spojenia, text pri konflikte v prehliadači a notifikácie.
+- [ ] Dochádzka: úplný prehliadačový konflikt a väčší súpis; súbeh presunu udalosti so súkromným zápisom.
+- [ ] Ďalší míľnik: rodinné prepojenia/stránkovanie, finančné detaily a opravy, nastavenia/notifikácie.
+- [ ] SMTP/doručenie a hosted obnova pozvánky, fyzický mobil/čítačka, zálohy a nasadenie.
+
+Staršie odseky nižšie zachytávajú historické míľniky. Ich HTTP 401, neaplikované migrácie, päť dependency findings a nefunkčné snímkovanie už nie sú aktuálne blokátory. Aktuálny poradovník je vyššie.
+
+## Historické pokračovanie — pozvánky a Graphify (26. október)
 
 - [x] Lokálna skúška čiastočného zlyhania pozvánky a opravy chýb: neistý výsledok služby, bezpečné výnimky, aktuálny neprepojený profil a overená identita. Manuálna obnova a hranice sú v [INVITATIONS.md](INVITATIONS.md).
 - [x] 28 nových serverových/PGlite prípadov; celkovo **350 testov**, check a build prešli. Závislosti zosúladené s existujúcim lockfilom (Next.js 16.4.2).
@@ -49,7 +62,7 @@ Use a compact desktop navigation rail, an immediate next-event feature and dense
 
 ## Remaining acceptance and next work
 
-1. Complete the remaining hosted notes matrix in INTERNAL_NOTES.md: editing/audit, second coach, current-role revocation, concurrent stale versions and mobile mutation UI. Local PGlite and interactive previews remain separate evidence.
+1. Complete the remaining hosted notes cases in LIVE_ATTENDANCE_NOTES.md: pagination, long text, connection errors, browser conflict retention and notification absence. Editing/audit, second coach, assignment revocation/deactivation, concurrent API versions and selected mobile mutations passed on 27 October.
 2. Continue remaining authenticated UI review: settings, notifications, fee details, family-link pagination and empty/error/loading states. Profile/training presentation has now been inspected at desktop/tablet/phone widths; full authenticated pages and real-device/screen-reader checks remain.
 3. Preserve check/test/build evidence per milestone. Root Graphify was refreshed on 26 October, including notes, attendance and SQL migrations. Confirm source locations after subsequent edits; graph structure is not live acceptance evidence.
 4. Follow-up acceptance: screen-reader/real mobile-device testing, complete live mutation matrix, invitation partial-failure rehearsal, SMTP delivery, backup restore and deployment checks remain distinct gates. Do not call the product production-ready based on visual checks.

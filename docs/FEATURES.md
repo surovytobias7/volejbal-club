@@ -1,4 +1,8 @@
-# Feature status - 2026-10-26
+# Feature status - 2026-10-27
+
+Aktuálne: **23 migrácií aplikovaných na potvrdenom testovacom Supabase, 0 čakajúcich**. Nový token funguje. **360 lokálnych testov** a produkčný build prešli. Živé rolové kontroly: 64/64; nová mutačná akceptácia doložila bulk a historickú dochádzku, izoláciu hráča/rodiny, oba druhy interných poznámok, autor/admin úpravy, audit, súbeh a revokáciu bez obnovy JWT. Trénerov zápis a mobilná úprava tréningovej poznámky prešli aj cez T3 s reloadom; hráč/rodič nemajú interné poznámky ani členskú administráciu. Nedostupné stránky majú slovenský text a návrat na prehľad. Presný rozsah, rozdelené behy a zostávajúce scenáre: [LIVE_ATTENDANCE_NOTES.md](LIVE_ATTENDANCE_NOTES.md).
+
+Ďalší vývoj: dokončiť zvyšné notes/attendance chybové a stránkovacie scenáre, potom autentifikované rodinné a finančné workflow. SMTP, zálohy, zariadenia a deployment nie sú potvrdené. Zod 4.6.7 a audit bez zraniteľností nahrádzajú staršie bezpečnostné blokátory nižšie. Nasledujú historické výsledky, nie aktuálny stav migrácií alebo testov.
 
 Aktuálne pokračovanie: **350/350 lokálnych testov v 19 súboroch**, TypeScript/ESLint a produkčný build na Next.js 16.4.2 prešli. Pozvánky majú overené lokálne chybové scenáre vrátane neurčitého výsledku služby, bezpečných chýb, kontroly identity, manuálneho prepojenia a auditu. Podrobnosti: [INVITATIONS.md](INVITATIONS.md). Doručenie SMTP a hosted obnova zostávajú otvorené. Graphify je aktualizovaný na súčasný kód, migrácie a dokumentáciu; ide o navigáciu, nie dôkaz živej akceptácie. Read-only história stále vracia **Management HTTP 401**; žiadne vzdialené migrácie ani e-maily. Lokálne zostáva 22 migrácií / 19 tabuliek / 27 RPC. Nasledujúce počty sú historické.
 

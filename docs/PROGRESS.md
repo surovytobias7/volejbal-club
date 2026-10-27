@@ -1,4 +1,16 @@
-# Progress - 2026-10-26
+# Progress - 2026-10-27
+
+## Supabase, živá dochádzka a poznámky — 27. október
+
+- Nový token obnovil Management prístup. Štyri skontrolované migrácie boli 26. októbra transakčne aplikované a overené. Pri ďalšom pokračovaní už existovala aj migrácia konfliktov `20261026191818`; aktuálna história potvrdzuje **23 aplikovaných / 0 čakajúcich**. Neaplikovala sa opakovane. Staršie HTTP 401 a čakajúce migrácie nižšie sú historické, už neplatia.
+- Skutočný Auth/PostgREST: **11/11 preflight a 64/64 rolových kontrol** (26. október). Nový runner `scripts/live-attendance-notes.mjs`: úvodných 11 úspechov, opravené zastarané očakávanie kódu konfliktu, následne **21/21** pri pokračovaní. Pôvodný neúspešný report zostal zachovaný. **31 odlišných úspešných kontrol** pokrýva bulk/atomicitu, oddelenú dostupnosť, vlastnú/rodinnú dochádzku, interné poznámky, audit, skutočný súbeh dvoch Auth relácií, revokáciu bez obnovy JWT a historické opravy. Podrobná evidencia a limity: [LIVE_ATTENDANCE_NOTES.md](LIVE_ATTENDANCE_NOTES.md).
+- T3 nad lokálnym produkčným buildom a živým testom: trénerské hromadné uloženie + individuálne meškanie, vytvorenie/úprava poznámky a persistencia po reload; mobil 390 × 844 bez vodorovného pretekania. Hráč a rodič majú iba vlastnú/rodinnú účasť, bez interných poznámok a administrácie členov. Snímkovanie už funguje. Fiktívne fixtures zostali zachované; bez e-mailov a produkčných údajov.
+- Reprodukovaná anglická 404 pri odmietnutí členského adresára: doplnené slovenské `src/app/not-found.tsx` a `src/app/klub/not-found.tsx`, bezpečný spoločný text pre neexistujúci/neprístupný obsah a návrat na prehľad. Existujúce komponenty, logo a klubová navigácia ostávajú konzistentné. Impeccable mechanický scan: bez nálezov. Použité Graphify, Impeccable, frontend-design a React pravidlá; bez agentov.
+- Zod je opravený na **4.6.7**; úplný npm audit pri overení 26. októbra: **0 zraniteľností**, vrátane pôvodného vývojového reťazca. Vitest konfigurácia `.mts` odstránila pôvodné CommonJS/ESM upozornenie. Tieto už existujúce zmeny sa zachovali. Záverečné kontroly po úpravách: **360/360 testov v 19 súboroch**, **`npm run check`** (typecheck + lint) a **produkčný build Next.js 16.4.2 prešli**.
+- `graphify update .` obnovil kódový graf; nasleduje zosúladenie dokumentových nadpisov/odkazov s aktuálnymi dôkazmi. Graf je lokálny navigačný artefakt, nie náhrada živých testov.
+- Najbližšie: zostávajúce notes/attendance scenáre uvedené v živom registri, potom rodinné prepojenia/financie/notifikácie. SMTP, hosted obnova pozvánky, fyzické zariadenie/čítačka, zálohy a nasadenie ostávajú samostatné brány. Žiadny automatický commit, push alebo deployment.
+
+Nasledujú historické záznamy; ich blokátory a počty nenahrádzajú aktuálny stav vyššie.
 
 ## Pozvánky, lokálne overenie a aktualizácia Graphify — 26. október
 

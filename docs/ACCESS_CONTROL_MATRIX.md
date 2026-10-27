@@ -4,6 +4,8 @@ Audit started 2026-10-19; implementation and local verification updated 2026-10-
 
 ## Authority and scope
 
+Aktualizácia 27. 10. 2026: testovací Supabase má potvrdených **23 migrácií / 19 RLS tabuliek / 27 RPC**. Nový živý dôkaz pokrýva osobnú/rodinnú dochádzku, odmietnuté cudzie zápisy, interné poznámky, admin audit, súbeh a okamžitú revokáciu. T3 potvrdilo hráčsky/rodičovský rozsah a zákaz členského adresára. Presné prípady a nevykonané hranice sú v [LIVE_ATTENDANCE_NOTES.md](LIVE_ATTENDANCE_NOTES.md); lokálne označenie T/U nižšie samo osebe neznamená živé overenie všetkých kombinácií rolí.
+
 `AGENTS.md`, `PRODUCT.md`, `docs/DATABASE.md` and the user's approved internal-notes scope are authoritative. Four **additive** roles: administrator (A), coach (C), player (P), guardian (G). Permissions combine only for the records justified by each role. Coaching never grants financial access. An Auth account alone does not establish a club role. Current database identity, active status, roles and relationships must be rechecked; JWT role metadata is not authoritative.
 
 Scopes: **club** = entire club; **teams** = current assigned coaching teams; **own** = current person's records; **children** = explicit current guardian links; **shared** = relevant team/club communications; **forbidden** = no access. An archive does not broaden scope. Personal historical attendance remains readable after leaving a team; it does not restore access to that team's current schedule or other players. Changing/removing a relationship is administrative and audited.
@@ -31,9 +33,9 @@ Read includes direct Data API/RPC, embeds, counts, search, filters and cursor pa
 
 `profiles`, `member_details`, `user_roles`, `club_settings`, `teams`, `team_memberships`, `guardian_players`, `event_series`, `events`, `availability`, `attendance`, `announcements`, `fee_plans`, `charges`, `payments`, `charge_adjustments`, `notifications`, `audit_logs`, `internal_notes`.
 
-### Public RPC inventory (26 locally; hosted upgrade pending)
+### Public RPC inventory (27 locally and on the test project)
 
-Writes: `create_member`, `edit_member`, `update_own_profile`, `create_event_batch`, `refresh_my_reminders`, `send_event_reminders`, `link_member_account`.
+Writes: `create_member`, `edit_member`, `update_own_profile`, `create_event_batch`, `refresh_my_reminders`, `send_event_reminders`, `link_member_account`, `save_attendance`.
 
 Reads: `finance_summary`, `charge_page`, `payment_page`, `dashboard_summary`, `member_page`, `team_page`, `attendance_page`, `announcement_page`, `selector_options`, `event_roster_page`, `team_roster_page`, `calendar_page`, `guardian_dashboard`, `can_access_internal_notes`, `internal_notes_page`, `viewer_context`, `member_private_details`, `audit_actor_names`, `can_manage_announcement`.
 
@@ -41,7 +43,7 @@ All must be authenticated-only. Public invokers retain RLS; private definer help
 
 ## Aktuálna matica oprávnení
 
-Rozsahy sa sčítajú podľa platných rolí a väzieb. Nasledujúce opravy sú **implementované a overené lokálne**; nové migrácie ešte nemajú hosted acceptance. `T` = PostgreSQL/RLS v PGlite; `U` = unit/mocked server alebo route test. Historické live/browser dôkazy nepreukazujú nové opravy.
+Rozsahy sa sčítajú podľa platných rolí a väzieb. Nasledujúce opravy sú **implementované a overené lokálne**; migrácie sú aplikované aj na teste. `T` = PostgreSQL/RLS v PGlite; `U` = unit/mocked server alebo route test. Živé dôkazy z 27. októbra vyššie dopĺňajú vybrané prípady; nevzťahujú sa automaticky na každý riadok matice.
 
 | Údaj / operácia | Administrátor | Tréner | Hráč | Rodič | Ochrana a dôkaz |
 | --- | --- | --- | --- | --- | --- |

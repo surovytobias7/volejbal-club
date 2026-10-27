@@ -1,5 +1,7 @@
 # Interné poznámky — 16. 10. 2026
 
+Aktualizácia 27. 10. 2026: oba druhy poznámok majú živé vytvorenie/čítanie, overené druhého trénera, admin opravu/audit, súbeh verzií a okamžitú revokáciu priradenia/deaktivácie. Tréningová poznámka prešla aj vytvorením/úpravou v T3 a reloadom na mobilnom rozmere. Hráč/rodič poznámky nevidia v UI ani Data API. Aktuálne **23 migrácií**; podrobnosti a zostávajúce stránkovacie/chybové prípady: [LIVE_ATTENDANCE_NOTES.md](LIVE_ATTENDANCE_NOTES.md). Stav 18 migrácií a neoverené úpravy v zázname nižšie sú historické k 18. októbru.
+
 ## Potvrdený rozsah
 
 Používateľ potvrdil poznámky k hráčovi aj tréningu: čítajú ich administrátor a priradení tréneri, upravuje autor alebo administrátor. Hráčska a rodičovská rola samostatne prístup nedávajú. Roly zostávajú aditívne.

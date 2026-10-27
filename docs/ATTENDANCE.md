@@ -1,5 +1,7 @@
 # Trénerova dochádzka — 21. október 2026
 
+Aktualizácia 27. 10. 2026: **23/23 migrácií na testovacom Supabase**, vrátane `20261026191818_attendance_conflict_response.sql`. Konflikt očakávanej verzie vracia `PT409` / HTTP 409, aby ho PostgREST automaticky neopakoval ako serializačnú chybu `40001`. Živé bulk/atomicita, súbeh dvoch Auth relácií, história/revokácia a vybrané T3 mutácie s reloadom prešli. Hráč a rodič vidia iba oprávnenú účasť. Podrobnosti a zostávajúce scenáre: [LIVE_ATTENDANCE_NOTES.md](LIVE_ATTENDANCE_NOTES.md). Staršie počty/chyby a obmedzenia snímkovania nižšie sú historické.
+
 ## Pracovný postup
 
 Kalendár, program tímu a trénerov prehľad vedú na existujúci detail udalosti `/klub/kalendar/[id]`. Sekcia Dochádzka a detail tímu navyše ponúkajú posledných päť nezrušených tréningov do konca dnešného dňa; ďalšie termíny zostávajú dostupné cez kalendár. Výber na zápis sa obmedzuje na tímy aktuálne pridelené trénerovi alebo všetky tímy administrátora, aj pri kombinácii tréner/rodič.
@@ -29,7 +31,7 @@ Migrácia pracovného postupu: `supabase/migrations/20261021201352_coach_attenda
 - História a štatistiky vynechávajú neoznačené riadky. Meškanie sa v súhrnnej účasti ráta ako účasť; história rozlišuje vlastný stav/počet meškaní.
 - Deaktivácia a odobratie roly/pridelenia účinkujú bez obnovy JWT. Po odobratí poslednej klubovej roly zaniká aj prístup cez predikát `private.viewer()` a server odmietne vstup do klubu.
 
-Migrácia nebola aplikovaná na vzdialený projekt. Pred použitím novej verzie na Supabase treba migráciu nasadiť koordinovane s aplikáciou a vykonať živé integračné overenie. Staršie dôkazy o živom Supabase nepotvrdzujú túto zmenu.
+Migrácie sú aplikované a overené na potvrdenom testovacom projekte; produkčné nasadenie zostáva samostatná brána. Živá evidencia je uvedená v aktualizácii z 27. októbra vyššie.
 
 ## Overenie
 
