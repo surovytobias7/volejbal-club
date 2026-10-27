@@ -89,6 +89,7 @@ describe("internal note server authorization", () => {
         data: { author_id: uid(2), player_id: uid(4), event_id: null },
         error: null,
       })
+      .mockResolvedValueOnce({ data: null, error: null })
       .mockResolvedValueOnce({ data: null, error: null });
     const result = await saveInternalNote({}, form(true));
     expect(query.eq).toHaveBeenCalledWith("version", 1);
@@ -124,5 +125,66 @@ describe("internal note server authorization", () => {
       player_id: uid(4),
       event_id: null,
     });
+  });
+  const current = {
+    id: uid(90),
+    body: "Novší uložený text",
+    version: 2,
+    author_id: uid(2),
+    player_id: uid(4),
+    event_id: null,
+  };
+  it("returns an authorized current version for comparison without advancing the draft", async () => {
+    query.maybeSingle
+      .mockResolvedValueOnce({ data: current, error: null })
+      .mockResolvedValueOnce({ data: null, error: null })
+      .mockResolvedValueOnce({ data: current, error: null });
+    const result = await saveInternalNote({}, form(true));
+    expect(result.conflict).toEqual({
+      id: current.id,
+      body: current.body,
+      version: 2,
+    });
+    expect(result.note).toBeUndefined();
+    expect(result.success).toBeUndefined();
+    expect(revalidatePath).not.toHaveBeenCalled();
+  });
+  it.each([
+    { data: null, error: null },
+    { data: current, error: { message: "private details" } },
+    { data: { ...current, author_id: uid(3) }, error: null },
+    { data: { ...current, player_id: uid(5) }, error: null },
+    { data: { ...current, version: 1 }, error: null },
+    { data: { ...current, id: uid(91) }, error: null },
+  ])(
+    "does not disclose conflict text after revoked or inconsistent edit scope %j",
+    async (latest) => {
+      query.maybeSingle
+        .mockResolvedValueOnce({ data: current, error: null })
+        .mockResolvedValueOnce({ data: null, error: null })
+        .mockResolvedValueOnce(latest);
+      const result = await saveInternalNote({}, form(true));
+      expect(result.conflict).toBeUndefined();
+      expect(JSON.stringify(result)).not.toContain(current.body);
+      expect(result.success).toBeUndefined();
+    },
+  );
+  it("keeps permission-service exceptions private", async () => {
+    db.rpc.mockRejectedValueOnce(new Error("private credentials"));
+    const result = await saveInternalNote({}, form());
+    expect(result.error).toBeTruthy();
+    expect(result.error).not.toContain("private");
+    expect(query.insert).not.toHaveBeenCalled();
+  });
+  it.each([
+    null,
+    { id: uid(90), body: "Different text", version: 1 },
+    { id: uid(90), body: "Tréningový cieľ", version: 2 },
+  ])("does not confirm an invalid create acknowledgement %j", async (data) => {
+    query.single.mockResolvedValue({ data, error: null });
+    const result = await saveInternalNote({}, form());
+    expect(result.error).toBeTruthy();
+    expect(result.success).toBeUndefined();
+    expect(revalidatePath).not.toHaveBeenCalled();
   });
 });

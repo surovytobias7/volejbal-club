@@ -9,6 +9,7 @@ import { ownResponseLabels } from "@/lib/player-dashboard";
 export type DashboardData = {
   name: string;
   roles: Role[];
+  canRecordAttendance?: boolean;
   teamCount: number;
   playerCount: number;
   eventCount: number;
@@ -105,7 +106,7 @@ export function Dashboard({
           <Link className="text-link" href={calendarHref}>
             <CalendarDays size={17} aria-hidden /> Otvoriť kalendár
           </Link>
-          {data.roles.some((role) => role === "coach" || role === "admin") && (
+          {(admin || (coach && (preview || data.canRecordAttendance))) && (
             <Link
               className="text-link"
               href={preview ? "/ukazka?view=udalost" : "/klub/dochadzka"}

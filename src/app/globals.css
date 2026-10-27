@@ -2519,6 +2519,23 @@ a.metric-line:hover {
     transform: none !important;
   }
 }
+.note-conflict {
+  border-top: 2px solid var(--blue);
+  padding-top: 16px;
+  display: grid;
+  gap: 12px;
+}
+.note-conflict .note-body {
+  max-height: 16rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.note-conflict-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
 /* Attendance is one working list; controls retain names and pressed semantics. */
 .attendance-board {
   margin: 24px 0 36px;

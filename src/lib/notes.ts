@@ -1,5 +1,11 @@
 import { z } from "zod";
 
+export const savedNoteSchema = z.object({
+  id: z.uuid(),
+  body: z.string().min(1).max(4000),
+  version: z.number().int().positive(),
+});
+
 export const noteInputSchema = z
   .object({
     id: z.uuid().optional(),

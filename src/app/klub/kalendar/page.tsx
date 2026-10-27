@@ -2,6 +2,7 @@ import Link from "next/link";
 import { z } from "zod";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { requireViewer } from "@/lib/auth";
+import { hasManagedTeam } from "@/lib/team-access";
 import { one } from "@/lib/data";
 import { calendarCursorSchema, calendarPageSchema } from "@/lib/calendar-data";
 import { SearchSelect } from "@/components/search-select";
@@ -46,7 +47,7 @@ export default async function Calendar({
     return d.toISOString().slice(0, 10);
   };
   const cursor = calendarCursorSchema.safeParse(query).data;
-  const [result, settings] = await Promise.all([
+  const [result, settings, canCreate] = await Promise.all([
     v.db.rpc("calendar_page", {
       p_from: localToUtc(`${day(0)}T00:00`),
       p_to: localToUtc(`${day(dayCount)}T00:00`),
@@ -57,6 +58,7 @@ export default async function Calendar({
       p_after_id: cursor?.afterId ?? null,
     }),
     v.db.from("club_settings").select("venue").single(),
+    hasManagedTeam(v, true),
   ]);
   const page = calendarPageSchema.parse(one(result));
   const club = one(settings);
@@ -86,7 +88,7 @@ export default async function Calendar({
         title="Kalendár"
         description="Každý tréning a zápas má svoje miesto. Časy sú uvedené pre Bratislavu."
         action={
-          v.roles.some((r) => r === "admin" || r === "coach") && (
+          canCreate && (
             <FormDialog
               title="Nová udalosť"
               description="Opakované udalosti zachovávajú miestny čas aj pri zmene letného času."

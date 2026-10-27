@@ -1,5 +1,6 @@
 ﻿import Link from "next/link";
 import { requireViewer } from "@/lib/auth";
+import { hasManagedTeam } from "@/lib/team-access";
 import { one } from "@/lib/data";
 import { dateTime } from "@/lib/utils";
 import { PageHeading, Panel, Empty } from "@/components/shared";
@@ -20,6 +21,7 @@ export default async function Announcements({
 }) {
   const v = await requireViewer();
   const admin = v.roles.includes("admin");
+  const canCreate = await hasManagedTeam(v, true);
   const params = await searchParams;
   const q = directoryQuery(params);
   const archived = params.archived === "true";
@@ -92,7 +94,7 @@ export default async function Announcements({
         title="Klubová nástenka"
         description="Správy, ktoré držia klub pohromade."
         action={
-          (admin || v.roles.includes("coach")) && (
+          canCreate && (
             <FormDialog
               title="Nový oznam"
               description="Vyberte publikum. Tréner môže publikovať iba pre tímy, ktoré vedie."

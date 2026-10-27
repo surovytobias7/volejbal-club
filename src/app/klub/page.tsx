@@ -1,5 +1,6 @@
 ﻿import { Dashboard } from "@/features/dashboard";
 import { requireViewer } from "@/lib/auth";
+import { hasManagedTeam } from "@/lib/team-access";
 import { rows, one } from "@/lib/data";
 import { financeSummarySchema } from "@/lib/finance";
 import { dashboardSummarySchema } from "@/lib/directories";
@@ -27,6 +28,7 @@ export default async function DashboardPage({
     children,
     visibleTeams,
     activity,
+    canRecordAttendance,
   ] = await Promise.all([
     v.db.rpc("dashboard_summary", { p_at: at }),
     v.db
@@ -62,6 +64,7 @@ export default async function DashboardPage({
           .order("id", { ascending: false })
           .limit(3)
       : Promise.resolve({ data: [], error: null }),
+    hasManagedTeam(v),
   ]);
   const stats = dashboardSummarySchema.parse(one(statistics));
   const summary = financeSummarySchema.parse(one(charges));
@@ -104,6 +107,7 @@ export default async function DashboardPage({
       data={{
         name: v.name,
         roles: v.roles,
+        canRecordAttendance,
         pendingCount: stats.pending_count,
         teamCount: stats.team_count,
         playerCount: stats.player_count,

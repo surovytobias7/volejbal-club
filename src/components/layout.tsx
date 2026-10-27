@@ -140,10 +140,9 @@ export function Shell({
               );
             })}
         </nav>
-        <nav className="sidebar-admin" aria-label="Správa klubu">
-          {admin &&
-            !preview &&
-            adminLinks.map((link) => (
+        {admin && !preview && (
+          <nav className="sidebar-admin" aria-label="Správa klubu">
+            {adminLinks.map((link) => (
               <Link
                 key={link.href}
                 className={`nav-link ${pathname === link.href ? "active" : ""}`}
@@ -155,7 +154,8 @@ export function Shell({
                 {link.label}
               </Link>
             ))}
-        </nav>
+          </nav>
+        )}
       </div>
       <div className="sidebar-bottom">
         <div className="sidebar-profile">

@@ -1,6 +1,6 @@
 import "server-only";
 import { cache } from "react";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { database } from "@/lib/supabase/server";
 import { publicEnvironment } from "@/lib/env";
 import { viewerContextSchema } from "@/lib/access";
@@ -35,7 +35,6 @@ export const requireViewer = cache(async () => {
 
 export async function requireAdmin() {
   const viewer = await requireViewer();
-  if (!viewer.roles.includes("admin"))
-    throw new Error("Na túto zmenu nemáte oprávnenie.");
+  if (!viewer.roles.includes("admin")) notFound();
   return viewer;
 }
