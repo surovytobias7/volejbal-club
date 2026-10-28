@@ -2,7 +2,27 @@
 
 Audit started 2026-10-19; implementation and local verification updated 2026-10-22. This is a product policy and verification register, not a production-security or GDPR certification. Existing changes were retained on `feature/authenticated-workflow-acceptance`. No production records are fixtures.
 
-## Authority and scope
+## Viditeľnosť ovládania — aktualizácia 28. 10. 2026
+
+Najnovšia oprava dochádzky: reload kontroluje `can_manage` aj následnú čitateľnosť/stav udalosti. Potvrdené odobratie správy vyčistí zobrazený súpis a návrhy; zrušenie nechá len uložené záznamy bez editácie. Chyba DB nie je potvrdenou revokáciou. Osem nových serverových regresií, celkovo **406 testov**; check/build prešli. Živý 30-členný súpis vracia hráčovi iba seba a rodičovi iba prepojené dieťa, obom `can_manage=false`. T3 overilo odmietnutý zápis a skrytie ovládania po reloade zrušenej udalosti; nový browser scenár odobratia trénerstva ostáva otvorený. Predchádzajúca živá DB revokácia bez zmeny JWT zostáva samostatným dôkazom. Detaily v LIVE_ATTENDANCE_NOTES.md.
+
+Neoprávnené položky sa **vôbec nevykresľujú**, ani ako disabled/locked. Viditeľnosť dopĺňa serverové guardy a RLS; nikdy ich nenahrádza. Slovenská 404 je iba fallback pri priamom/zastaranom odkaze alebo zmenenom oprávnení.
+
+| Povrch | Pravidlo viditeľnosti |
+| --- | --- |
+| Desktopová a mobilná navigácia | Členovia iba admin/tréner; financie podľa aktuálneho `can_finance`; nastavenia/audit a celý administrátorský región iba admin. Osobné/rodinné prehľady zostávajú dostupné. |
+| Dashboard: Zapísať dochádzku | Admin alebo tréner s aktuálnym priradením. Vlastné hráčske členstvo ani prístup cez dieťa nestačí. Archivovaný trénerský tím zachováva opravy histórie. |
+| Kalendár: Nová udalosť; Oznamy: Nový oznam | Admin alebo tréner s aktuálnym nearchivovaným tímom. Selectory ponúkajú iba spravované tímy; server kontroluje konkrétny cieľ aj pri zmene. |
+| Detail udalosti a tímu | Úpravy udalosti, stav, pripomienky a skutočná dochádzka podľa RPC `can_manage`; tréningové skratky len pre priradený tím. Správa tímu/členstva iba admin. Osobné roly majú iba vlastné/rodinné odpovede a záznamy. |
+| Interné poznámky | Celý blok podľa aktuálneho kontextu admin/tréner; tlačidlo úpravy podľa `can_edit`. Konfliktný text sa nevracia po strate práva úpravy. |
+| Financie a členský detail | Plány, priradenie poplatku, úhrada, storno, opravy, roly, pozvánky a rodinné väzby iba admin. Tréner nezískava finančnú správu pridaním rodičovskej roly. |
+| Kontextové odkazy a upozornenia | RLS/RPC obmedzujú záznamy, rostery a aktuálny zdroj upozornenia. Historická dochádzka bez čitateľnej udalosti má obyčajný text namiesto odkazu. |
+
+Lokálny dôkaz: `role-visibility.test.ts` renderuje navigáciu, dashboard, kalendár a oznamy pre štyri roly, finančné rozsahy a aditívne kombinácie; kontroluje aj nepriradený/archivovaný tím a chybu lookupu. `admin-routes.test.ts` používa skutočný serverový guard pred dotazom na administrátorské dáta. `access-routes.test.ts` pokrýva osobný adresár, finance a skryté detaily. Existujúca PGlite matica a serverové mutačné testy zostávajú samostatnou bezpečnostnou vrstvou. Celkovo **398 lokálnych testov**.
+
+Živý dôkaz tohto pokračovania: tréner bez finančnej/admin navigácie, slovenská 404 na priamych nastaveniach, edit tlačidlo iba pri vlastnej poznámke; mobilná rodičovská navigácia bez členov/admin/správy dochádzky, s oprávnenými rodinnými platbami. Nových 17 API kontrol pokrýva hranice a súkromie poznámok vrátane platného cudzieho kurzora. Opakovanie osobných detailov v T3 sa pri niektorých navigáciách zastavilo na streamovanom loading stave; tieto pokusy nie sú nové úspešné UI dôkazy. Staršie úspešné hráčske/rodičovské kontroly sú oddelene v LIVE_ATTENDANCE_NOTES.md. Kompletná živá kombinatorika rolí ani fyzický mobil sa netvrdia.
+
+## Aktuálna databázová autorita
 
 Aktualizácia 27. 10. 2026: testovací Supabase má potvrdených **23 migrácií / 19 RLS tabuliek / 27 RPC**. Nový živý dôkaz pokrýva osobnú/rodinnú dochádzku, odmietnuté cudzie zápisy, interné poznámky, admin audit, súbeh a okamžitú revokáciu. T3 potvrdilo hráčsky/rodičovský rozsah a zákaz členského adresára. Presné prípady a nevykonané hranice sú v [LIVE_ATTENDANCE_NOTES.md](LIVE_ATTENDANCE_NOTES.md); lokálne označenie T/U nižšie samo osebe neznamená živé overenie všetkých kombinácií rolí.
 

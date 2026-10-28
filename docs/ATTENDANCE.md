@@ -1,5 +1,9 @@
 # Trénerova dochádzka — 21. október 2026
 
+Aktualizácia 28. 10. 2026: **406 lokálnych testov**, check/build prešli. Nový runner `scripts/live-attendance-roster.mjs` má **9/9 živých kontrol**, úplný súpis 30 hráčov cez 25 + 5, atomický bulk a hráčsky/rodičovský rozsah. Autentifikovaný T3 overil bulk pri filtri, opravu s dôvodom, konflikt vyvolaný druhou Auth/API reláciou, porovnanie a explicitné prevzatie uloženého stavu so zachovaním druhého návrhu, uloženie/reload a nezmenenú dostupnosť. Mobilný viewport 390 × 844 nepretekal; tlačidlá stavov 82 × 74 px. Podrobnosti a limity v [LIVE_ATTENDANCE_NOTES.md](LIVE_ATTENDANCE_NOTES.md).
+
+Reload teraz vracia aj aktuálny stav udalosti. Zrušenie nahradí návrhy uloženými hodnotami a úplne skryje editáciu; potvrdená strata správy odstráni aj súpis. Prechodná DB chyba zachová možnosť opakovať načítanie. Zrušenie je overené živým browser tokom, nový UI výsledok revokácie zatiaľ serverovými testami. Bez novej migrácie. História znovu potvrdená **23/0** priamym TLS/read-only spojením; posledná kontrola Management API vrátila **401**. Nasledujú historické výsledky.
+
 Aktualizácia 27. 10. 2026: **23/23 migrácií na testovacom Supabase**, vrátane `20261026191818_attendance_conflict_response.sql`. Konflikt očakávanej verzie vracia `PT409` / HTTP 409, aby ho PostgREST automaticky neopakoval ako serializačnú chybu `40001`. Živé bulk/atomicita, súbeh dvoch Auth relácií, história/revokácia a vybrané T3 mutácie s reloadom prešli. Hráč a rodič vidia iba oprávnenú účasť. Podrobnosti a zostávajúce scenáre: [LIVE_ATTENDANCE_NOTES.md](LIVE_ATTENDANCE_NOTES.md). Staršie počty/chyby a obmedzenia snímkovania nižšie sú historické.
 
 ## Pracovný postup

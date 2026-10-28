@@ -50,7 +50,57 @@ Súkromný `test-results/live-attendance-notes-state.json` obsahuje prihlasovaci
 
 ## Zostávajúca akceptácia
 
-1. Poznámky: živé stránkovanie, hranične dlhý text, chyba spojenia, zachovanie textu pri konflikte v prehliadači a overenie neprítomnosti notifikácií hráčom/rodičom. Súbeh API nie je dôkaz zachovania formulára.
-2. Dochádzka: celý prehliadačový konflikt/obnova, väčší súpis a súbeh presunu udalosti so vznikom súkromného záznamu.
+1. Poznámky: nižšie uvedené hraničné scenáre sú dokončené. Dlhodobý výpadok siete a strata odpovede až po DB commite ostávajú samostatnými odolnostnými kontrolami.
+2. Dochádzka: prehliadačový konflikt/obnova a 30-členný súpis sú dokončené v rozsahu nižšie. Ostáva súbeh presunu udalosti so vznikom súkromného záznamu a nový browser scenár odobratia trénerstva.
 3. Ďalší bod roadmapy: autentifikované rodinné prepojenia a ich stránkovanie, finančné detaily/opravné zápisy, nastavenia a notifikácie.
 4. Samostatné brány: SMTP/doména a doručenie, hosted obnova pozvánky, fyzický mobil, čítačka obrazovky, obnova zálohy a nasadenie.
+
+## Hranice poznámok — 28. október
+
+`scripts/live-notes-boundaries.mjs`: **17/17 úspešných kontrol**, sanitizovaný report `test-results/live-notes-boundaries.json`. Používa existujúce Auth roly a presne overenú fiktívnu udalosť/tím/hráča; nový tréning a 52 poznámok zostali na teste. Žiadne mazanie, migrácie, service-role zápisy alebo odoslanie e-mailu.
+
+- Pre hráča aj tréning: 26 nových poznámok, všetky načítané kurzorom bez duplicít aj pri rovnakom čase vytvorenia, presný 4 000-znakový text; 4 001 znakov odmietne databázový constraint.
+- Hráč a rodič nedostanú poznámky ani pri odoslaní platného kurzora získaného trénerom. Autorizovaná oprava zvýši verziu. Po vytvorení a úpravách zostal počet ich upozornení nezmenený; notifikácie vytvorenia testovacej udalosti boli pred meraním.
+- Autentifikovaný T3, dve okná rovnakého trénera: druhé okno uloží verziu 2; prvé so starou verziou zachová návrh a zobrazí nový text, blokuje submit do explicitného rozhodnutia. Mobil 390 × 844: výber uloženého textu, vrátenie pôvodného návrhu a úspešné uloženie verzie 3.
+- Jednorazovo simulované odmietnutie browser POST pred odoslaním: text/verzia zostali, pending sa ukončil a slovenská chyba bola viditeľná. Ďalší reálny POST uspel s verziou 4; reload potvrdil presný text. Nejde o reálny Supabase outage ani stratenú odpoveď po commite.
+- Mobilné načítanie nového tréningu: prvá stránka 25, ďalšia 1 vrátane celého 4 000-znakového textu, bez vodorovného pretekania. API overilo obe kategórie; tento prehliadačový pagination prípad bol tréningový.
+
+Spustenie iba pri vedomom vytvorení nového testovacieho behu:
+
+```powershell
+node --use-system-ca scripts/live-notes-boundaries.mjs --write-test-data --fixture-event=<uuid-existujucej-fiktivnej-udalosti>
+```
+
+Vyžaduje existujúce `.env.local` / `.env.live.local`, presný `LIVE_TEST_PROJECT_URL`, štyri pripravené testovacie účty a fixture s očakávaným názvom. Správca je použitý iba na meranie počtu upozornení; zapisuje tréner. `test-results/live-notes-boundaries-state.json` sa vytvára s `wx` pred prvým zápisom a obsahuje iba checkpoint cieľa/IDs. Dokončený ani prerušený beh automaticky neopakovať a checkpoint nemažte na účely reseedovania. Existujúci dokončený runner dochádzky sa nespúšťal znovu.
+
+Migračná história 28. októbra: Management **401**, ale priame overené TLS/read-only spojenie potvrdilo **23/0**. T3 snímkovanie a dokončenie streamovaného renderu sú občas nestabilné; úspech sa pripisuje iba skutočne dokončeným interakciám, nie samotnej prítomnosti skrytého SSR HTML.
+
+## Súpis 30 hráčov a obnova dochádzky — 28. október
+
+`scripts/live-attendance-roster.mjs`: **9/9 úspešných kontrol**, sanitizovaný report `test-results/live-attendance-roster.json`. Samostatný testovací tím obsahuje 29 nových fiktívnych profilov a existujúceho fiktívneho hráča, priradeného trénera a rodinné prepojenie na prvého nového hráča. Dve samostatné udalosti oddeľujú API a browser scenár. Žiadne nové Auth účty, e-maily, service-role zápisy, migrácie ani mazanie.
+
+| Kontrola | Skutočný výsledok |
+| --- | --- |
+| Úplnosť súpisu | RPC stránky 25 + 5, 30 jedinečných hráčov, všetci pôvodne neoznačení. |
+| Bulk a read-back | Atomická dávka 30 vrátane meškania/ospravedlnenia za prvou stránkou; 30 uložených riadkov verzie 1 bez duplicít. |
+| Konflikt a oprava | Zastaraná verzia odmietne celú zmiešanú dávku (`PT409`); nekonfliktný riadok nezmenený. Zrušenie označenia zachová riadok a zvýši verziu. |
+| Osobný/rodinný rozsah | Hráč dostane iba seba, rodič iba prepojené dieťa; obaja bez `can_manage`. |
+
+T3 na lokálnej produkčnej zostave so skutočným Supabase, desktop 1280 × 800:
+
+1. Viditeľných 30 neoznačených hráčov. Vyhľadávanie jedného hráča, `Všetci prítomní` zmení všetkých 30, uloženie potvrdené. Individuálna oprava na ospravedlnenie s krátkym fiktívnym dôvodom uložená.
+2. Browser ponechal návrh neprítomnosti prvého hráča. Druhá nezávislá Auth/API relácia toho istého trénera uložila meškanie. V browseri pribudol druhý nekonfliktný návrh meškania. Druhý editor nebol druhý browser formulár.
+3. Uloženie odmietlo celú zastaranú dávku, oba návrhy zostali; samostatný API read-back potvrdil nezmenený druhý riadok. `Načítať aktuálne záznamy` označilo konflikt, `Zobraziť celý súpis` ho sprístupnilo mimo filtra. `Použiť uložený stav` prevzalo prvý záznam a ponechalo druhý návrh. Nasledujúce uloženie prešlo.
+4. Nové načítanie a API read-back potvrdili 30 jedinečných záznamov: 28 prítomných / 2 meškania. Rodičovská dostupnosť zostala `no` s pôvodným fiktívnym dôvodom počas všetkých opráv.
+
+Mobil 390 × 844: viditeľné statusové tlačidlá 82 × 74 px a žiadne vodorovné pretekanie. Izolovaná browser udalosť bola v druhej Auth relácii zrušená a stav overený čítaním. Návrh neprítomnosti z otvoreného súpisu server odmietol. Reload zobrazil uložené meškanie, vyčistil návrh a odstránil všetky statusové aj save tlačidlá; aktuálna dochádzka aj dostupnosť zostali nezmenené. Fixture zostala zrušená. Následná drobná úprava read-only textu odstránila výzvy na označovanie a nepresné tvrdenie o výsledku skoršieho nepotvrdeného zápisu; prešla lokálnymi check/test/build, nevyžadovala nový DB zápis.
+
+Nová implementácia reloadu má osem serverových regresných testov (stav, strata oprávnenia, udalosť skrytá po načítaní súpisu, prechodná DB chyba, osobné roly). **406/406 lokálnych testov v 21 súboroch**, check bez upozornení a build prešli. Nový UI scenár po odobratí trénerstva nebol v tomto behu živým browser testom; samostatná historická DB revokácia zostáva platným dôkazom. T3 streamovanie/snímkovanie občas zlyhalo a bolo opakované; skryté SSR riadky sa nepovažovali za úspešný render. Fyzický mobil, čítačka, dlhodobý outage a strata odpovede po commite nie sú týmto overené.
+
+Runner vyžaduje presný `LIVE_TEST_PROJECT_URL`, existujúce štyri fiktívne identity a čerstvo overenú migračnú históriu bez neznámych/čakajúcich verzií. Spúšťa sa iba pri vedomom vytvorení nového behu:
+
+```powershell
+node --use-system-ca scripts/live-attendance-roster.mjs --write-test-data
+```
+
+Súkromný checkpoint `test-results/live-attendance-roster-state.json` sa rezervuje exkluzívne (`wx`) pred prvým zápisom, obsahuje cieľ a fixture IDs. **Dokončený beh nespúšťať znovu a checkpoint nemažte na účely reseedovania.** Žiadny zo starších dokončených runnerov nebol opakovaný. Overená vzdialená história zostáva **23/0**; nová migrácia nebola potrebná.

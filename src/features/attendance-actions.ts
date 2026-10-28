@@ -9,19 +9,36 @@ import {
   savedAttendanceSchema,
   type AttendanceInput,
   type AttendanceSaveResult,
+  type AttendanceReloadResult,
 } from "@/lib/attendance";
 
-export async function reloadAttendance(eventId: string) {
+export async function reloadAttendance(
+  eventId: string,
+): Promise<AttendanceReloadResult> {
   const viewer = await requireViewer();
   if (
     !z.uuid().safeParse(eventId).success ||
     !viewer.roles.some((role) => role === "admin" || role === "coach")
   )
-    return { error: "K dochádzke už nemáte prístup." };
+    return { error: "K dochádzke už nemáte prístup.", unavailable: true };
   try {
     const roster = await loadEventRoster(viewer.db, eventId);
-    if (!roster.canManage) return { error: "K dochádzke už nemáte prístup." };
-    return { players: roster.players };
+    if (!roster.canManage)
+      return { error: "K dochádzke už nemáte prístup.", unavailable: true };
+    // Recheck after pagination: the event may have been cancelled or hidden
+    // while its roster was being loaded. Never restore stale edit controls.
+    const event = await viewer.db
+      .from("events")
+      .select("status")
+      .eq("id", eventId)
+      .maybeSingle();
+    if (event.error) throw new Error("Event lookup failed");
+    if (!event.data)
+      return { error: "K dochádzke už nemáte prístup.", unavailable: true };
+    return {
+      players: roster.players,
+      readOnly: event.data.status === "cancelled",
+    };
   } catch {
     return {
       error: "Aktuálne záznamy sa nepodarilo načítať. Skúste to znova.",

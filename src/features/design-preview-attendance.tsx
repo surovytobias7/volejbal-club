@@ -152,7 +152,7 @@ export function DesignPreviewAttendance() {
         initialPlayers={saved}
         readOnly={cancelled}
         saveAction={save}
-        reloadAction={async () => ({ players: saved })}
+        reloadAction={async () => ({ players: saved, readOnly: cancelled })}
         preview
       />
     </>

@@ -1,19 +1,24 @@
 # Product UI roadmap
 
-Updated: 2026-10-27. It records the current implementation and redesign; it does not replace the live acceptance gates in M4_LIVE_ACCEPTANCE.md. PRODUCT.md and DESIGN.md hold the confirmed usage context and design rules.
+Updated: 2026-10-28. It records the current implementation and redesign; it does not replace the live acceptance gates in M4_LIVE_ACCEPTANCE.md. PRODUCT.md and DESIGN.md hold the confirmed usage context and design rules.
 
 ## Aktuálne pokračovanie — živá dochádzka a interné poznámky
 
 - [x] Obnovený Management prístup a overená vzdialená história: **23 aplikovaných / 0 čakajúcich migrácií**. Štyri pôvodne čakajúce migrácie sú aplikované a skontrolované; existujúca 23. migrácia sa neopakovala.
 - [x] Živé Auth/RLS mutácie: hromadná/atomická dochádzka, oddelená dostupnosť, história, súbeh, oba druhy poznámok, druhý tréner, admin audit a okamžitá revokácia. Presné reporty a limity v [LIVE_ATTENDANCE_NOTES.md](LIVE_ATTENDANCE_NOTES.md).
 - [x] Autentifikovaný T3: trénerské uloženie, mobilná úprava tréningovej poznámky a reload; osobný/rodinný pohľad a odmietnutie členského adresára. Opravená anglická 404.
-- [x] Lokálna sada **360 testov** a produkčný build; Zod opravený a audit bez zraniteľností pri overení 26. októbra.
-- [ ] Zvyšná akceptácia poznámok: živé stránkovanie/dlhý text, výpadok spojenia, text pri konflikte v prehliadači a notifikácie.
-- [ ] Dochádzka: úplný prehliadačový konflikt a väčší súpis; súbeh presunu udalosti so súkromným zápisom.
+- [x] Lokálna sada **406 testov**, typecheck, lint bez upozornení a produkčný build prešli 28. októbra; evidencia v PROGRESS.md.
+- [x] Viditeľnosť podľa oprávnení: žiadne zamknuté položky; vytváranie udalostí/oznamov vyžaduje aktuálny aktívny trénerský tím, skratka dochádzky aktuálne trénerstvo. Admin adresy majú slovenskú 404. Lokálne regresie vrátane aditívnych rolí; rozsah prehliadačových kontrol v ACCESS_CONTROL_MATRIX.md.
+- [x] Poznámky: **17/17 nových živých kontrol** pre hráča aj tréning (26 záznamov, kurzory, 4 000/4 001 znakov, súkromie, absencia notifikácií). T3 overilo konflikt dvoch formulárov, výber verzie/vrátenie textu, simulovanú chybu odoslania, následné uloženie a reload. Mobilné stránkovanie 25 + 1 a dlhý text bez pretekania.
+- [x] Dochádzka: **9/9 nových živých kontrol** súpisu 30 hráčov (25 + 5), atomicity a osobného/rodinného rozsahu. T3: hromadné označenie pri vyhľadávaní, oprava s dôvodom, konflikt vyvolaný druhou Auth reláciou, explicitné prevzatie uloženého stavu a zachovanie nekonfliktného návrhu, uloženie a opätovné načítanie. Mobilná obnova po zrušení skryje všetky ovládacie prvky dochádzky.
+- [x] Reload dochádzky vracia aktuálny stav udalosti; potvrdená strata oprávnenia odstráni súpis aj návrhy. Prechodná chyba databázy sa nepovažuje za revokáciu. Bez novej migrácie.
+- [ ] Dochádzka: živý súbeh presunu udalosti so vznikom súkromného záznamu; browser obnova po odobratí trénerstva.
 - [ ] Ďalší míľnik: rodinné prepojenia/stránkovanie, finančné detaily a opravy, nastavenia/notifikácie.
 - [ ] SMTP/doručenie a hosted obnova pozvánky, fyzický mobil/čítačka, zálohy a nasadenie.
 
-Staršie odseky nižšie zachytávajú historické míľniky. Ich HTTP 401, neaplikované migrácie, päť dependency findings a nefunkčné snímkovanie už nie sú aktuálne blokátory. Aktuálny poradovník je vyššie.
+Aktuálna prevádzková hranica: **28. októbra Management API opäť vrátilo HTTP 401**. Priame TLS spojenie s kontrolou testovacieho cieľa a read-only transakciou potvrdilo **23 aplikovaných / 0 čakajúcich migrácií**. Žiadna nová migrácia ani reset. Reálny dlhodobý výpadok siete a strata odpovede po commite nie sú prehliadačovým testom simulovaného odmietnutia odoslania pokryté.
+
+Staršie odseky nižšie sú historické; aktuálny poradovník a blokátory sú vyššie.
 
 ## Historické pokračovanie — pozvánky a Graphify (26. október)
 
@@ -62,7 +67,7 @@ Use a compact desktop navigation rail, an immediate next-event feature and dense
 
 ## Remaining acceptance and next work
 
-1. Complete the remaining hosted notes cases in LIVE_ATTENDANCE_NOTES.md: pagination, long text, connection errors, browser conflict retention and notification absence. Editing/audit, second coach, assignment revocation/deactivation, concurrent API versions and selected mobile mutations passed on 27 October.
+1. Notes acceptance, the 30-player roster and attendance browser conflict/cancellation recovery are complete for the documented scenarios. Next: concurrent event movement/private writes and browser assignment-revocation recovery. Prolonged outages, unknown post-commit outcomes and physical devices remain separate resilience checks.
 2. Continue remaining authenticated UI review: settings, notifications, fee details, family-link pagination and empty/error/loading states. Profile/training presentation has now been inspected at desktop/tablet/phone widths; full authenticated pages and real-device/screen-reader checks remain.
 3. Preserve check/test/build evidence per milestone. Root Graphify was refreshed on 26 October, including notes, attendance and SQL migrations. Confirm source locations after subsequent edits; graph structure is not live acceptance evidence.
 4. Follow-up acceptance: screen-reader/real mobile-device testing, complete live mutation matrix, invitation partial-failure rehearsal, SMTP delivery, backup restore and deployment checks remain distinct gates. Do not call the product production-ready based on visual checks.

@@ -9,6 +9,7 @@ import {
   type AttendanceDraft,
   type AttendanceInput,
   type AttendanceSaveResult,
+  type AttendanceReloadResult,
   type AttendanceStatus,
 } from "@/lib/attendance";
 import type { EventRosterPlayer } from "@/lib/rosters";
@@ -29,7 +30,7 @@ const draftOf = (player: EventRosterPlayer): AttendanceDraft => ({
 export function AttendanceBoard({
   eventId,
   initialPlayers,
-  readOnly = false,
+  readOnly: initialReadOnly = false,
   saveAction,
   reloadAction,
   preview = false,
@@ -38,12 +39,13 @@ export function AttendanceBoard({
   initialPlayers: EventRosterPlayer[];
   readOnly?: boolean;
   saveAction: (input: AttendanceInput) => Promise<AttendanceSaveResult>;
-  reloadAction: (
-    eventId: string,
-  ) => Promise<{ players?: EventRosterPlayer[]; error?: string }>;
+  reloadAction: (eventId: string) => Promise<AttendanceReloadResult>;
   preview?: boolean;
 }) {
   const [players, setPlayers] = useState(initialPlayers);
+  const [cancelled, setCancelled] = useState(false);
+  const [unavailable, setUnavailable] = useState(false);
+  const readOnly = initialReadOnly || cancelled;
   const [drafts, setDrafts] = useState<Record<string, AttendanceDraft>>(() =>
     Object.fromEntries(initialPlayers.map((p) => [p.profile_id, draftOf(p)])),
   );
@@ -125,7 +127,14 @@ export function AttendanceBoard({
     setFeedback({ text: "" });
   }
   async function save() {
-    if (saveLock.current || readOnly || !dirty || review.length || conflict)
+    if (
+      saveLock.current ||
+      readOnly ||
+      unavailable ||
+      !dirty ||
+      review.length ||
+      conflict
+    )
       return;
     saveLock.current = true;
     setBusy(true);
@@ -187,9 +196,32 @@ export function AttendanceBoard({
     try {
       const result = await reloadAction(eventId);
       if (!result.players) {
+        if (result.unavailable) {
+          setUnavailable(true);
+          setPlayers([]);
+          setDrafts({});
+          setReview([]);
+          setBulkUndo(null);
+        }
         setFeedback({
           text: result.error || "Záznamy sa nepodarilo načítať.",
           error: true,
+        });
+        return;
+      }
+      if (result.readOnly) {
+        setCancelled(true);
+        setPlayers(result.players);
+        setDrafts(
+          Object.fromEntries(
+            result.players.map((p) => [p.profile_id, draftOf(p)]),
+          ),
+        );
+        setReview([]);
+        setConflict(false);
+        setBulkUndo(null);
+        setFeedback({
+          text: "Tréning bol zrušený. Zobrazená je aktuálne uložená dochádzka.",
         });
         return;
       }
@@ -236,6 +268,13 @@ export function AttendanceBoard({
     }
   }
 
+  if (unavailable)
+    return (
+      <p className="feedback feedback-error" role="alert">
+        {feedback.text}
+      </p>
+    );
+
   return (
     <section
       className="attendance-board"
@@ -246,7 +285,9 @@ export function AttendanceBoard({
         <div>
           <h2 id="attendance-heading">Skutočná dochádzka</h2>
           <p className="muted">
-            Označte účasť a uložte zmeny. Plánované odpovede zostanú nezmenené.
+            {readOnly
+              ? "Prehľad uloženej účasti. Plánované odpovede sú uvedené samostatne."
+              : "Označte účasť a uložte zmeny. Plánované odpovede zostanú nezmenené."}
           </p>
         </div>
         <span className="attendance-total">{players.length} hráčov</span>
@@ -269,8 +310,10 @@ export function AttendanceBoard({
         </span>
       </div>
       {readOnly && (
-        <p className="feedback">
+        <p className="feedback" role="status">
           Zrušená udalosť. Dochádzku si môžete prezrieť, zmeny nie sú povolené.
+          {cancelled &&
+            " Rozpracovaný súpis bol nahradený aktuálne uloženou dochádzkou."}
         </p>
       )}
       <div className="attendance-toolbar">
@@ -363,9 +406,10 @@ export function AttendanceBoard({
       </div>
       {(query || onlyUnmarked) && (
         <p className="muted attendance-search-count" role="status">
-          Zobrazení: {visible.length} z {players.length}. Hromadné označenie
-          platí pre celý súpis.
-          {onlyUnmarked &&
+          Zobrazení: {visible.length} z {players.length}.
+          {!readOnly && " Hromadné označenie platí pre celý súpis."}
+          {!readOnly &&
+            onlyUnmarked &&
             " Rozpracovaný riadok zostáva viditeľný počas úpravy."}
         </p>
       )}

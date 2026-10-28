@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { EventRosterPlayer } from "@/lib/rosters";
 
 export const attendanceStatus = z.enum([
   "present",
@@ -54,6 +55,14 @@ export type AttendanceDraft = {
   status: AttendanceStatus | null;
   reason: string;
 };
+export type AttendanceReloadResult =
+  | {
+      players: EventRosterPlayer[];
+      readOnly: boolean;
+      error?: never;
+      unavailable?: never;
+    }
+  | { error: string; unavailable?: boolean; players?: never; readOnly?: never };
 
 export function attendanceChanges(
   players: {

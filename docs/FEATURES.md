@@ -1,4 +1,12 @@
-# Feature status - 2026-10-27
+# Feature status - 2026-10-28
+
+Najnovšie pokračovanie: **406 lokálnych testov**, check bez upozornení a produkčný build prešli. Dochádzka po reloade rešpektuje aktuálne zrušenie udalosti a potvrdenú stratu oprávnenia; neprístupné ovládanie sa odstráni. **9/9 nových živých kontrol** overilo súpis 30 hráčov, atomicitu a osobný/rodinný rozsah. T3 so živým Supabase potvrdilo bulk pri filtri, opravu s dôvodom, konflikt s druhou Auth reláciou, explicitnú obnovu, zachovanie ďalšieho návrhu, persistenciu a mobilný read-only stav po zrušení. Dostupnosť rodiča zostala nezmenená. Bez novej migrácie; história **23/0** cez overené TLS, posledný Management výsledok **401**. Ďalej súbeh presunu udalosti a browser revokácia, potom rodinné/finančné workflow. Presná evidencia: [LIVE_ATTENDANCE_NOTES.md](LIVE_ATTENDANCE_NOTES.md).
+
+Nasledujú výsledky predchádzajúcich míľnikov toho istého dňa a staršie záznamy.
+
+Aktualizácia 28. októbra: **398 lokálnych testov**, typecheck a lint prešli. Predchádzajúce opravy skrytia neoprávnených akcií a slovenských administrátorských fallbackov zostávajú. Poznámky majú dokončené porovnanie konfliktu, zachovanie návrhu pri chybe, explicitný výber verzie a vrátenie návrhu. Živých **17/17 nových kontrol** potvrdilo obe kategórie, stránkovanie, hranice textu a absenciu upozornení. T3 potvrdilo konflikt, simulovanú transportnú chybu, následné uloženie/reload a mobilný dlhý text. Presný rozsah v [LIVE_ATTENDANCE_NOTES.md](LIVE_ATTENDANCE_NOTES.md).
+
+Aktuálne testovacie migrácie: **23/0**, overené priamym TLS/read-only spojením. Management API opäť vracia **401**; jeho historický úspech nižšie nie je aktuálnou dostupnosťou. Najbližšie pokračovanie: zostávajúca akceptácia dochádzky, potom rodinné/finančné workflow. Nasledujú staršie míľniky.
 
 Aktuálne: **23 migrácií aplikovaných na potvrdenom testovacom Supabase, 0 čakajúcich**. Nový token funguje. **360 lokálnych testov** a produkčný build prešli. Živé rolové kontroly: 64/64; nová mutačná akceptácia doložila bulk a historickú dochádzku, izoláciu hráča/rodiny, oba druhy interných poznámok, autor/admin úpravy, audit, súbeh a revokáciu bez obnovy JWT. Trénerov zápis a mobilná úprava tréningovej poznámky prešli aj cez T3 s reloadom; hráč/rodič nemajú interné poznámky ani členskú administráciu. Nedostupné stránky majú slovenský text a návrat na prehľad. Presný rozsah, rozdelené behy a zostávajúce scenáre: [LIVE_ATTENDANCE_NOTES.md](LIVE_ATTENDANCE_NOTES.md).
 

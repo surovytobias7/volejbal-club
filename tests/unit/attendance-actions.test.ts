@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { requireViewer } from "../../src/lib/auth";
-import { saveAttendance } from "../../src/features/attendance-actions";
+import {
+  saveAttendance,
+  reloadAttendance,
+} from "../../src/features/attendance-actions";
+import { loadEventRoster } from "../../src/lib/event-roster";
 import { revalidatePath } from "next/cache";
 vi.mock("../../src/lib/auth", () => ({ requireViewer: vi.fn() }));
 vi.mock("../../src/lib/event-roster", () => ({ loadEventRoster: vi.fn() }));
@@ -61,6 +65,61 @@ beforeEach(() => {
     error: null,
   });
   db.rpc.mockReturnValue({ abortSignal });
+  vi.mocked(loadEventRoster).mockResolvedValue({
+    players: [],
+    canManage: true,
+  });
+});
+describe("attendance reload authorization and cancellation", () => {
+  it.each(["scheduled", "completed", "cancelled"])(
+    "returns the current %s session state with the authorized roster",
+    async (status) => {
+      query.maybeSingle
+        .mockReset()
+        .mockResolvedValue({ data: { status }, error: null });
+      expect(await reloadAttendance(uid(30))).toEqual({
+        players: [],
+        readOnly: status === "cancelled",
+      });
+    },
+  );
+  it("marks confirmed assignment revocation as unavailable without returning a roster", async () => {
+    vi.mocked(loadEventRoster).mockResolvedValue({
+      players: [],
+      canManage: false,
+    });
+    const result = await reloadAttendance(uid(30));
+    expect(result).toMatchObject({ unavailable: true });
+    expect(result).not.toHaveProperty("players");
+  });
+  it("rechecks the event after loading the roster and hides a newly inaccessible event", async () => {
+    query.maybeSingle
+      .mockReset()
+      .mockResolvedValue({ data: null, error: null });
+    expect(await reloadAttendance(uid(30))).toMatchObject({
+      unavailable: true,
+    });
+  });
+  it("does not mistake a database failure for confirmed revocation", async () => {
+    query.maybeSingle
+      .mockReset()
+      .mockResolvedValue({ data: null, error: { message: "private detail" } });
+    const result = await reloadAttendance(uid(30));
+    expect(result).toHaveProperty("error");
+    expect(result).not.toHaveProperty("players");
+    expect(result).not.toHaveProperty("unavailable", true);
+    expect(JSON.stringify(result)).not.toContain("private detail");
+  });
+  it.each(["player", "guardian"] as const)(
+    "rejects %s before loading a coach roster",
+    async (role) => {
+      viewer([role]);
+      expect(await reloadAttendance(uid(30))).toMatchObject({
+        unavailable: true,
+      });
+      expect(loadEventRoster).not.toHaveBeenCalled();
+    },
+  );
 });
 describe("attendance server authorization", () => {
   it.each(["player", "guardian"] as const)(
@@ -189,7 +248,10 @@ describe("attendance server authorization", () => {
     expect(result.records).toHaveLength(1);
   });
   it("bounds the RPC and never confirms a timed-out write", async () => {
-    abortSignal.mockResolvedValue({ data: null, error: { code: "", message: "TimeoutError: private connection detail" } });
+    abortSignal.mockResolvedValue({
+      data: null,
+      error: { code: "", message: "TimeoutError: private connection detail" },
+    });
     const result = await saveAttendance(input);
     expect(abortSignal).toHaveBeenCalledWith(expect.any(AbortSignal));
     expect(result.records).toBeUndefined();

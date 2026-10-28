@@ -16,7 +16,9 @@ Používateľ potvrdil poznámky k hráčovi aj tréningu: čítajú ich adminis
 
 `internal_notes`: kontext, text (1–4 000 znakov), autor a jeho meno v čase vytvorenia, čas vytvorenia/úpravy, verzia. Databáza určuje autora aj časy. API môže vkladať iba kontext/text a meniť iba text. Mazanie nie je dostupné.
 
-Server Action overí aktívneho používateľa, rolu, aktuálny prístup ku kontextu, autora a nemenný kontext. Aktualizácia používa verziu otvoreného záznamu. Pri konflikte vyzve na skopírovanie rozpracovaného textu a obnovenie stránky. RLS a databázový trigger vynucujú práva aj pri priamom API zápise.
+Server Action overí aktívneho používateľa, rolu, aktuálny prístup ku kontextu, autora a nemenný kontext. Aktualizácia používa verziu otvoreného záznamu. Pri konflikte znovu načíta záznam cez RLS a kontroluje kontext i právo úpravy pred vrátením novšieho textu. Formulár ponechá návrh, zobrazí uloženú verziu a vyžaduje explicitný výber; nahradenie návrhu možno vrátiť. Výber sám nič neukladá. RSC refresh automaticky nezvýši verziu rozpracovaného textu. RLS a databázový trigger vynucujú práva aj pri priamom API zápise.
+
+Odpoveď uloženia musí potvrdiť ID, text a očakávanú novú verziu; inak sa úspech nezobrazí. Serverové i transportné výnimky zachovávajú návrh a neposielajú interné chyby klientovi. Pri neistom výsledku vytvorenia sa odporučí skontrolovať zoznam pred opakovaním. **28. októbra** prešli živé kurzory a textové hranice oboch typov poznámok, absencia notifikácií a T3 konflikt/simulovaná chyba; evidencia v LIVE_ATTENDANCE_NOTES.md.
 
 Vytvorenie a úpravy zapisujú starý/nový obsah do existujúceho `audit_logs`, ktorý je dostupný iba administrátorovi. Obrazovka Histórie zmien označuje operácie ako „Interná poznámka“; samostatný prehliadač starých textových verzií sa nepridával.
 
