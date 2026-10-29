@@ -1,4 +1,23 @@
-# Progress - 2026-10-28
+# Progress - 2026-10-29
+
+## Browser revokácia trénerstva — 29. október
+
+- Pokračovanie cez Graphify z existujúcej roadmapy; predchádzajúce necommitnuté zmeny zachované. Dokončený najbližší otvorený bod bez novej migrácie alebo zmeny aplikačných oprávnení.
+- Nový `scripts/live-attendance-revocation.mjs`: **7/7 živých kontrol**. Prihlásenie skutočným formulárom, otvorená dochádzka s neuloženou zmenou, odobratie iba izolovaného testovacieho trénerstva cez druhú Auth reláciu, odmietnutý Server Action zápis a nezmenené databázové hodnoty/verzia. Reload odstránil súpis, návrhy a save ovládanie; nový page load vrátil nedostupnú udalosť. Auth cookies zostali nezmenené. Priradenie sa vo `finally` obnovilo a read-back potvrdil úspech; obe relácie odhlásené.
+- T3 `preview_status` nemal pripojený prehliadač; po úvodnom timeout nástroj `preview_open` výslovne oznámil neprítomnosť hostiteľa a zákaz opakovania. Použitý povolený fallback: headless Playwright Chromium, viewport 390 × 844, lokálny produkčný server a reálny testovací Supabase. Nie je to T3 ani fyzický mobil. Chýbajúca binárka Chromium bola doinštalovaná; prvé pokusy skončili pred revokáciou. Nešlo o produktovú chybu.
+- Fixture je existujúci tím a udalosť z predchádzajúcej akceptácie súbehu. Bez nových klubových/Auth záznamov, e-mailov alebo nasadenia; dočasná zmena členstva má auditnú stopu. Sanitizovaný report: `test-results/live-attendance-revocation.json`.
+- `npm run check` prešlo; `npm test`: **406/406, 21 súborov**, bez timeoutov. **Produkčný build prešiel**, Prettier a `git diff --check` bez nálezov. `graphify update .` obnovil AST graf s novým runnerom; dokumentová evidencia bola upravená priamo. Ďalší míľnik: rodinné prepojenia a stránkovanie, finančné detaily/opravné zápisy, nastavenia/notifikácie. Žiadny commit, push ani agenti.
+
+## Súbeh presunu udalosti — 29. október
+
+- Záverečné kontroly: **406/406 testov v 21 súboroch**, `npm run check` a `npm run build` prešli. Prvý súbežný beh s buildom skončil timeoutom jedného existujúceho testu nad 1 000 riadkov (405/406); opakovaná celá sada bez buildu prešla bez zmeny limitov alebo testov. Prettier a `git diff --check` bez nálezov. Odmietnutie opakovaného live behu aj zachovanie hash pôvodného reportu boli overené.
+- `graphify update .` obnovil kódový graf: **1 140 uzlov / 2 642 hrán / 77 komunít**; následná query našla nový runner. Ide o AST aktualizáciu, nie novú sémantickú extrakciu všetkých dokumentov. Zostáva známe upozornenie na nesúvisiaci C# súbor; nemenil sa.
+
+- Čistá vetva `main`; aktuálny Graphify a roadmapa ukázali, že poznámky aj veľký súpis sú už dokončené. Zachované existujúce zmeny; žiadne opakovanie seedu ani predošlej akceptácie.
+- Nový opt-in `scripts/live-event-scope-race.mjs`: **18/18 živých kontrol**. Pri zápise dochádzky, dostupnosti a tréningovej poznámky proti presunu udalosti do iného tímu uspel vždy iba prípustný výsledok. Pokryté obe postupné poradia a súčasne odoslané požiadavky nezávislých Auth relácií. Read-back preveril tím, počet záznamov a rozsah trénera. Test nevynucuje konkrétne poradie DB zámkov ani nenahrádza záťažový test.
+- Vznikli iba dva izolované testovacie tímy a deväť udalostí s fiktívnymi zápismi a existujúcimi testovacími účtami. Exkluzívny checkpoint zabraňuje reseedovaniu; reporty nevypisujú prihlasovacie údaje. Bez Auth účtov, e-mailov, mazania, migrácií alebo zmien aplikačných oprávnení.
+- Prvý preflight zastavila chýbajúca stará fixture mapa, ešte pred akýmkoľvek zápisom. Runner používa existujúce súkromné `LIVE_*` účty z `.env.live.local` a preveruje ich aktuálne jednotlivé roly. Priame DB spojenie zlyhalo; následný Management read-only preflight úspešne potvrdil **23/0**. HTTP 401 z 28. októbra už nie je aktuálnym výsledkom.
+- Ďalší otvorený bod: browser obnova dochádzky po odobratí trénerstva, potom rodinné/finančné workflow. V tomto pokračovaní sa nemenilo UI a nevykonávala nová browser akceptácia. Bez commitu, pushu, nasadenia alebo agentov.
 
 ## Dochádzka: veľký súpis a obnova — 28. október
 

@@ -2,6 +2,22 @@
 
 ## Rozsah a cieľ
 
+### Doplnenie 29. októbra: browser revokácia trénerstva
+
+`node --use-system-ca scripts/live-attendance-revocation.mjs --write-test-data`: **7/7**. Vyžaduje bežiaci aktuálny produkčný server na `localhost:3000`, Chromium pre Playwright, existujúce súkromné `LIVE_ADMIN_*`/`LIVE_COACH_*`, zhodný testovací cieľ a dokončený `live-event-scope-race-state.json`. Používa jeho izolovaný pôvodný tím a attendance/write-first udalosť; nové fixtures nevytvára.
+
+Skutočný login formulár → mobilný viewport 390 × 844 → rozpracované meškanie → odobratie priradenia druhou Auth reláciou → odmietnuté uloženie s nezmenenou DB verziou/hodnotami → explicitný reload odstráni súpis/návrhy/ovládanie → page reload odmietne udalosť. Auth cookies zostali nezmenené. Obnovenie testovacieho členstva vo `finally` bolo potvrdené; relácie odhlásené. Pád celého procesu môže prerušiť cleanup: vtedy treba preveriť a obnoviť len toto konkrétne testovacie členstvo, nie naslepo opakovať test.
+
+Sanitizovaný report: `test-results/live-attendance-revocation.json`. Heslá a cookies sa nevypisujú ani neukladajú do reportu. T3 hostiteľ výslovne nebol dostupný, preto bol použitý headless Playwright fallback po inštalácii chýbajúceho Chromium; nejde o nový T3 dôkaz, fyzický mobil alebo kombinovanú coach/guardian rolu. Scenár revokácie priradenia je uzavretý v tomto rozsahu.
+
+### Doplnenie 29. októbra: presun udalosti
+
+`node --use-system-ca scripts/live-event-scope-race.mjs --write-test-data`: **18/18 úspešných kontrol** na potvrdenom testovacom Supabase. Pre dochádzku, dostupnosť a tréningové poznámky overuje poradie zápis → presun, presun → zápis a súčasné požiadavky dvoch Auth relácií. Ak uspeje zápis, presun musí vrátiť `23514`; ak uspeje presun, zápis pôvodného trénera/hráča musí vrátiť `42501`. Neznáme sieťové/schémové chyby nie sú úspešným odmietnutím. Následné čítanie overuje skutočný tím, počet súkromných záznamov a prístup trénera.
+
+Podmienky: súkromné `LIVE_ADMIN_*`, `LIVE_COACH_*`, `LIVE_PLAYER_*`, zhodný `LIVE_TEST_PROJECT_URL` a úspešný `npm run db:status` nie starší než hodinu. Účty musia mať práve jednu očakávanú rolu. Exkluzívny `test-results/live-event-scope-race-state.json` blokuje opakovanie aj po čiastočnom zlyhaní; nevymazávať ho na účel opakovania. Sanitizovaný report: `test-results/live-event-scope-race.json`; odmietnutý rerun ho neprepíše. Dva tímy, deväť udalostí a zápisy zostali ako fiktívne auditovateľné fixtures, bez nových Auth účtov alebo e-mailov. Relácie boli odhlásené.
+
+Paralelný režim odosiela požiadavky súčasne, ale nevynucuje prekrytie konkrétnych DB zámkov. Nie je to záťažový test ani nová browser akceptácia. Management preflight potvrdil 23 migrácií bez čakajúcich; priama DB alternatíva v tomto behu zlyhala bez zmeny databázy.
+
 Overenie používa potvrdený testovací Supabase a výhradne fiktívne účty. Lokálna produkčná zostava Next.js komunikuje so skutočným Auth/PostgREST. Nie je to nasadenie ani úplná produkčná akceptácia.
 
 Nový Management token funguje. Štyri chýbajúce migrácie boli 26. októbra po kontrole presného prefixu, SQL účinkov a RLS aplikované transakčne spolu s históriou, následne overené čítaním a obnovením PostgREST schémy. Dôkaz: ignorovaný `test-results/migrations-applied.json`. Pri pokračovaní 27. októbra už vetva aj test obsahovali ďalšiu migráciu `20261026191818_attendance_conflict_response.sql`; nebola znovu aplikovaná. `npm run db:status` potvrdil **23 aplikovaných, 0 čakajúcich migrácií**. Bez resetu alebo produkčných zápisov.

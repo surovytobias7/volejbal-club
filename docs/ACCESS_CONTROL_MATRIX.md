@@ -1,8 +1,12 @@
 # Access control, architecture and privacy audit
 
+29. október — doplnený browser dôkaz revokácie trénerstva: otvorený návrh dochádzky sa po odobratí testovacieho priradenia neuloží; explicitný reload odstráni súpis/návrhy/ovládanie. Nové načítanie udalosti je odmietnuté. **7/7**, nezmenené Auth cookies, obnovenie členstva potvrdené. Použitý headless Chromium pri nedostupnom T3 hostiteľovi; nie fyzické zariadenie. Starší otvorený browser scenár nižšie je týmto uzavretý pre toto priradenie a viewport, nie pre všetky kombinované roly.
+
 Audit started 2026-10-19; implementation and local verification updated 2026-10-22. This is a product policy and verification register, not a production-security or GDPR certification. Existing changes were retained on `feature/authenticated-workflow-acceptance`. No production records are fixtures.
 
 ## Viditeľnosť ovládania — aktualizácia 28. 10. 2026
+
+Živé doplnenie 29. októbra: presun udalosti so súkromným zápisom overený v 18 kontrolách Auth/PostgREST pre `attendance`, `availability` a `internal_notes`, vrátane súčasných HTTP požiadaviek a oboch postupných poradí. Read-back nepripustil prenos záznamu do cudzieho tímu; pôvodný tréner nečíta úspešne presunutú udalosť. Toto nie je deterministický test všetkých DB interleavingov. Evidencia a spustenie: LIVE_ATTENDANCE_NOTES.md.
 
 Najnovšia oprava dochádzky: reload kontroluje `can_manage` aj následnú čitateľnosť/stav udalosti. Potvrdené odobratie správy vyčistí zobrazený súpis a návrhy; zrušenie nechá len uložené záznamy bez editácie. Chyba DB nie je potvrdenou revokáciou. Osem nových serverových regresií, celkovo **406 testov**; check/build prešli. Živý 30-členný súpis vracia hráčovi iba seba a rodičovi iba prepojené dieťa, obom `can_manage=false`. T3 overilo odmietnutý zápis a skrytie ovládania po reloade zrušenej udalosti; nový browser scenár odobratia trénerstva ostáva otvorený. Predchádzajúca živá DB revokácia bez zmeny JWT zostáva samostatným dôkazom. Detaily v LIVE_ATTENDANCE_NOTES.md.
 

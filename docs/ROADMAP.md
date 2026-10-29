@@ -1,8 +1,10 @@
 # Product UI roadmap
 
-Updated: 2026-10-28. It records the current implementation and redesign; it does not replace the live acceptance gates in M4_LIVE_ACCEPTANCE.md. PRODUCT.md and DESIGN.md hold the confirmed usage context and design rules.
+Updated: 2026-10-29. It records the current implementation and redesign; it does not replace the live acceptance gates in M4_LIVE_ACCEPTANCE.md. PRODUCT.md and DESIGN.md hold the confirmed usage context and design rules.
 
 ## Aktuálne pokračovanie — živá dochádzka a interné poznámky
+
+- [x] 29. október: nový live runner a jeho ochrana pred opakovaním overené; **406/406 lokálnych testov**, check a build prešli. Prvý timeout pri paralelnom builde a úspešný samostatný rerun sú zaznamenané v PROGRESS.md. Graphify AST aktualizovaný na 1 140 uzlov.
 
 - [x] Obnovený Management prístup a overená vzdialená história: **23 aplikovaných / 0 čakajúcich migrácií**. Štyri pôvodne čakajúce migrácie sú aplikované a skontrolované; existujúca 23. migrácia sa neopakovala.
 - [x] Živé Auth/RLS mutácie: hromadná/atomická dochádzka, oddelená dostupnosť, história, súbeh, oba druhy poznámok, druhý tréner, admin audit a okamžitá revokácia. Presné reporty a limity v [LIVE_ATTENDANCE_NOTES.md](LIVE_ATTENDANCE_NOTES.md).
@@ -12,11 +14,12 @@ Updated: 2026-10-28. It records the current implementation and redesign; it does
 - [x] Poznámky: **17/17 nových živých kontrol** pre hráča aj tréning (26 záznamov, kurzory, 4 000/4 001 znakov, súkromie, absencia notifikácií). T3 overilo konflikt dvoch formulárov, výber verzie/vrátenie textu, simulovanú chybu odoslania, následné uloženie a reload. Mobilné stránkovanie 25 + 1 a dlhý text bez pretekania.
 - [x] Dochádzka: **9/9 nových živých kontrol** súpisu 30 hráčov (25 + 5), atomicity a osobného/rodinného rozsahu. T3: hromadné označenie pri vyhľadávaní, oprava s dôvodom, konflikt vyvolaný druhou Auth reláciou, explicitné prevzatie uloženého stavu a zachovanie nekonfliktného návrhu, uloženie a opätovné načítanie. Mobilná obnova po zrušení skryje všetky ovládacie prvky dochádzky.
 - [x] Reload dochádzky vracia aktuálny stav udalosti; potvrdená strata oprávnenia odstráni súpis aj návrhy. Prechodná chyba databázy sa nepovažuje za revokáciu. Bez novej migrácie.
-- [ ] Dochádzka: živý súbeh presunu udalosti so vznikom súkromného záznamu; browser obnova po odobratí trénerstva.
+- [x] Súbeh presunu udalosti: **18/18 živých kontrol** cez Auth/PostgREST pre dochádzku, dostupnosť a poznámky; obe postupné poradia aj súčasné HTTP požiadavky. Záznam sa nepreniesol do cudzieho tímu, tréner stratil čítanie presunutej udalosti. Nejde o deterministické vynútenie prekrytia DB zámkov ani záťažový test.
+- [x] Dochádzka: browser obnova po odobratí trénerstva — **7/7 živých kontrol** v headless Chromium (390 × 844), pretože T3 nemal dostupného hostiteľa. Otvorený návrh sa neuložil, reload odstránil súpis/ovládanie, nový load odmietol udalosť, Auth cookies zostali nezmenené. Testovacie priradenie obnovené a potvrdené.
 - [ ] Ďalší míľnik: rodinné prepojenia/stránkovanie, finančné detaily a opravy, nastavenia/notifikácie.
 - [ ] SMTP/doručenie a hosted obnova pozvánky, fyzický mobil/čítačka, zálohy a nasadenie.
 
-Aktuálna prevádzková hranica: **28. októbra Management API opäť vrátilo HTTP 401**. Priame TLS spojenie s kontrolou testovacieho cieľa a read-only transakciou potvrdilo **23 aplikovaných / 0 čakajúcich migrácií**. Žiadna nová migrácia ani reset. Reálny dlhodobý výpadok siete a strata odpovede po commite nie sú prehliadačovým testom simulovaného odmietnutia odoslania pokryté.
+Aktuálna prevádzková hranica: **29. októbra Management API funguje a potvrdilo 23 aplikovaných / 0 čakajúcich migrácií**. Priame DB spojenie v tomto behu zlyhalo; nevypínalo sa TLS overovanie. Žiadna nová migrácia ani reset. Reálny dlhodobý výpadok siete a strata odpovede po commite nie sú prehliadačovým testom simulovaného odmietnutia odoslania pokryté.
 
 Staršie odseky nižšie sú historické; aktuálny poradovník a blokátory sú vyššie.
 

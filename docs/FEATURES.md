@@ -1,4 +1,10 @@
-# Feature status - 2026-10-28
+# Feature status - 2026-10-29
+
+Dokončené browser overenie revokácie trénerstva: **7/7** v headless Chromium nad reálnym testovacím Supabase. Odobratie priradenia zablokuje uloženie otvoreného návrhu; reload odstráni súpis aj ovládanie a nový load odmietne udalosť bez obnovy Auth cookies. Testovacie priradenie obnovené. T3 hostiteľ bol nedostupný; nejde o T3 alebo fyzický mobil. Lokálne check a **406/406 testov** prešli. Nasledujú rodinné a finančné workflow; presné hranice v PROGRESS.md.
+
+Záverečné lokálne overenie 29. októbra: **406/406**, typecheck, lint a produkčný build úspešné. Prvý beh mal jeden timeout pri súbežnom builde; samostatné opakovanie celej sady prešlo bez úpravy testov. Graphify AST graf aktualizovaný.
+
+29. október: **18/18 nových živých kontrol** ochrany presunu udalosti proti zápisu dochádzky, dostupnosti a interných poznámok. Obe postupné poradia a paralelné HTTP požiadavky zachovali izoláciu tímov; read-back potvrdil odmietnutie prenosu súkromných záznamov a trénerský rozsah. Nový opt-in runner je `scripts/live-event-scope-race.mjs`. Management história opäť funguje: **23 aplikovaných / 0 čakajúcich**. Bez novej migrácie alebo UI zmeny. Browser revokácia trénerstva zostáva ďalším bodom; nasledujúce výsledky sú historické.
 
 Najnovšie pokračovanie: **406 lokálnych testov**, check bez upozornení a produkčný build prešli. Dochádzka po reloade rešpektuje aktuálne zrušenie udalosti a potvrdenú stratu oprávnenia; neprístupné ovládanie sa odstráni. **9/9 nových živých kontrol** overilo súpis 30 hráčov, atomicitu a osobný/rodinný rozsah. T3 so živým Supabase potvrdilo bulk pri filtri, opravu s dôvodom, konflikt s druhou Auth reláciou, explicitnú obnovu, zachovanie ďalšieho návrhu, persistenciu a mobilný read-only stav po zrušení. Dostupnosť rodiča zostala nezmenená. Bez novej migrácie; história **23/0** cez overené TLS, posledný Management výsledok **401**. Ďalej súbeh presunu udalosti a browser revokácia, potom rodinné/finančné workflow. Presná evidencia: [LIVE_ATTENDANCE_NOTES.md](LIVE_ATTENDANCE_NOTES.md).
 
