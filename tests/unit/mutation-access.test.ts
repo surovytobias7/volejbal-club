@@ -8,6 +8,31 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 const id = (n: number) =>
   `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+
+it.each([
+  ["coach"],
+  ["player"],
+  ["guardian"],
+  ["coach", "guardian"],
+] as Role[][])(
+  "denies family-link administration for %s before any database query",
+  async (...roles) => {
+    viewer(roles);
+    for (const remove of ["false", "true"]) {
+      const form = new FormData();
+      for (const [key, value] of Object.entries({
+        command: "guardian",
+        guardian_id: id(2),
+        player_id: id(4),
+        remove,
+      }))
+        form.set(key, value);
+      expect((await mutate({}, form)).error).toBeTruthy();
+    }
+    expect(db.from).not.toHaveBeenCalled();
+    expect(db.rpc).not.toHaveBeenCalled();
+  },
+);
 const writes: { table: string; value: unknown }[] = [];
 let assigned: boolean;
 let linked: boolean;

@@ -1,5 +1,7 @@
 # Access control, architecture and privacy audit
 
+30. október — rodinné prepojenia: správu link/unlink má iba administrátor. Štyri serverové regresné prípady (tréner, hráč, rodič, tréner+rodič) overujú odmietnutie oboch operácií pred DB dotazom. **18/18 živých kontrol** potvrdilo tabuľkové RLS, rodinné kurzory, okamžité odpojenie bez obnovy JWT a zachovanie väzby druhého rodiča. Autentifikovaný T3 overil admin správu/persistenciu, rodičovské stránky bez správy väzieb a slovenský fallback na priamy odpojený profil. Celkovo **412 lokálnych testov**, check/build prešli. Rodinné údaje sa nezamieňajú s klubovým adresárom; žiadna zmena RLS ani nová migrácia. Rozsah a limity: [FAMILY_LINKS.md](FAMILY_LINKS.md).
+
 29. október — doplnený browser dôkaz revokácie trénerstva: otvorený návrh dochádzky sa po odobratí testovacieho priradenia neuloží; explicitný reload odstráni súpis/návrhy/ovládanie. Nové načítanie udalosti je odmietnuté. **7/7**, nezmenené Auth cookies, obnovenie členstva potvrdené. Použitý headless Chromium pri nedostupnom T3 hostiteľovi; nie fyzické zariadenie. Starší otvorený browser scenár nižšie je týmto uzavretý pre toto priradenie a viewport, nie pre všetky kombinované roly.
 
 Audit started 2026-10-19; implementation and local verification updated 2026-10-22. This is a product policy and verification register, not a production-security or GDPR certification. Existing changes were retained on `feature/authenticated-workflow-acceptance`. No production records are fixtures.

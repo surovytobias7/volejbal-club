@@ -68,6 +68,42 @@ beforeEach(() => {
   for (const key of Object.keys(filters)) delete filters[key];
 });
 
+it.each([false, true])(
+  "distinguishes an empty family from an exhausted cursor (continued=%s)",
+  (continued) => {
+    const html = renderToStaticMarkup(
+      createElement(Dashboard, {
+        data: {
+          name: "Fiktívny rodič",
+          roles: ["guardian"],
+          teamCount: 0,
+          playerCount: 0,
+          eventCount: 0,
+          balance: null,
+          participation: null,
+          teams: {},
+          events: [],
+          announcements: [],
+          children: [],
+          childCount: continued ? 5 : 0,
+          childContinued: continued,
+        },
+      }),
+    );
+    if (continued) {
+      expect(html).toContain("Na tejto stránke už nie sú žiadne deti");
+      expect(html).toContain('href="/klub#deti"');
+      expect(html).toContain("Na začiatok");
+      expect(html).not.toContain("Správca klubu vám priradí deti");
+    } else {
+      expect(html).toContain("Žiadne dostupné deti");
+      expect(html).not.toContain("Na začiatok");
+    }
+    expect(html).not.toContain("Prepojiť dieťa");
+    expect(html).not.toContain("Zrušiť prepojenie");
+  },
+);
+
 it.each([
   { roles: ["admin"], finance: true, members: true, admin: true },
   { roles: ["coach"], finance: false, members: true, admin: false },

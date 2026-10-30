@@ -1,6 +1,6 @@
 # Product UI roadmap
 
-Updated: 2026-10-29. It records the current implementation and redesign; it does not replace the live acceptance gates in M4_LIVE_ACCEPTANCE.md. PRODUCT.md and DESIGN.md hold the confirmed usage context and design rules.
+Updated: 2026-10-30. It records the current implementation and redesign; it does not replace the live acceptance gates in M4_LIVE_ACCEPTANCE.md. PRODUCT.md and DESIGN.md hold the confirmed usage context and design rules.
 
 ## Aktuálne pokračovanie — živá dochádzka a interné poznámky
 
@@ -16,10 +16,11 @@ Updated: 2026-10-29. It records the current implementation and redesign; it does
 - [x] Reload dochádzky vracia aktuálny stav udalosti; potvrdená strata oprávnenia odstráni súpis aj návrhy. Prechodná chyba databázy sa nepovažuje za revokáciu. Bez novej migrácie.
 - [x] Súbeh presunu udalosti: **18/18 živých kontrol** cez Auth/PostgREST pre dochádzku, dostupnosť a poznámky; obe postupné poradia aj súčasné HTTP požiadavky. Záznam sa nepreniesol do cudzieho tímu, tréner stratil čítanie presunutej udalosti. Nejde o deterministické vynútenie prekrytia DB zámkov ani záťažový test.
 - [x] Dochádzka: browser obnova po odobratí trénerstva — **7/7 živých kontrol** v headless Chromium (390 × 844), pretože T3 nemal dostupného hostiteľa. Otvorený návrh sa neuložil, reload odstránil súpis/ovládanie, nový load odmietol udalosť, Auth cookies zostali nezmenené. Testovacie priradenie obnovené a potvrdené.
-- [ ] Ďalší míľnik: rodinné prepojenia/stránkovanie, finančné detaily a opravy, nastavenia/notifikácie.
+- [x] 30. október: rodinné prepojenia a stránkovanie — **18/18 živých kontrol**, admin 25 + 1, rodičovské stránky po 4, súkromie a okamžité odpojenie bez obnovy JWT. T3 overilo admin odpojenie/opätovné prepojenie s reloadom, mobilný rodičovský prehľad, neprístupný profil a návrat zo zastaraného kurzora. Opravený zavádzajúci prázdny stav. **412/412 lokálnych testov**, check a build prešli. Presný rozsah: [FAMILY_LINKS.md](FAMILY_LINKS.md).
+- [ ] Ďalší míľnik: finančné detaily a opravy, potom nastavenia/notifikácie.
 - [ ] SMTP/doručenie a hosted obnova pozvánky, fyzický mobil/čítačka, zálohy a nasadenie.
 
-Aktuálna prevádzková hranica: **29. októbra Management API funguje a potvrdilo 23 aplikovaných / 0 čakajúcich migrácií**. Priame DB spojenie v tomto behu zlyhalo; nevypínalo sa TLS overovanie. Žiadna nová migrácia ani reset. Reálny dlhodobý výpadok siete a strata odpovede po commite nie sú prehliadačovým testom simulovaného odmietnutia odoslania pokryté.
+Aktuálna prevádzková hranica: **30. októbra Management API vrátilo HTTP 401**. Priame TLS/read-only spojenie s overením cieľa a certifikátu potvrdilo **23 aplikovaných / 0 čakajúcich migrácií**. Žiadna nová migrácia ani reset. Reálny dlhodobý výpadok siete a strata odpovede po commite nie sú prehliadačovým testom simulovaného odmietnutia odoslania pokryté.
 
 Staršie odseky nižšie sú historické; aktuálny poradovník a blokátory sú vyššie.
 
@@ -70,9 +71,9 @@ Use a compact desktop navigation rail, an immediate next-event feature and dense
 
 ## Remaining acceptance and next work
 
-1. Notes acceptance, the 30-player roster and attendance browser conflict/cancellation recovery are complete for the documented scenarios. Next: concurrent event movement/private writes and browser assignment-revocation recovery. Prolonged outages, unknown post-commit outcomes and physical devices remain separate resilience checks.
-2. Continue remaining authenticated UI review: settings, notifications, fee details, family-link pagination and empty/error/loading states. Profile/training presentation has now been inspected at desktop/tablet/phone widths; full authenticated pages and real-device/screen-reader checks remain.
-3. Preserve check/test/build evidence per milestone. Root Graphify was refreshed on 26 October, including notes, attendance and SQL migrations. Confirm source locations after subsequent edits; graph structure is not live acceptance evidence.
+1. Notes, large attendance rosters, conflict/cancellation recovery, event movement and coach revocation are complete for the documented scenarios. Family links/pagination and stale-cursor recovery now have live API and authenticated T3 evidence. Prolonged outages, unknown post-commit outcomes and physical devices remain separate resilience checks.
+2. Next: authenticated fee details and audited financial corrections, then settings/notifications and their empty/error/loading states. Reuse existing modules; full live role combinations and real-device/screen-reader checks remain.
+3. Preserve check/test/build evidence per milestone. Root Graphify is refreshed after code changes. Confirm source locations against current files; graph structure is not live acceptance evidence.
 4. Follow-up acceptance: screen-reader/real mobile-device testing, complete live mutation matrix, invitation partial-failure rehearsal, SMTP delivery, backup restore and deployment checks remain distinct gates. Do not call the product production-ready based on visual checks.
 
 ## Navigation for the next session

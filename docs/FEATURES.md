@@ -1,4 +1,8 @@
-# Feature status - 2026-10-29
+# Feature status - 2026-10-30
+
+30. október: rodinné prepojenia/stránkovanie majú **18/18 nových živých kontrol** a autentifikovanú T3 akceptáciu. Admin spravuje väzby cez existujúci profil (25 + 1); rodič má iba vlastné deti po štyroch, bez správy väzieb. Odpojenie okamžite odoberie profil a rodinný súhrn bez obnovy JWT. Opravený prázdny stav pri zastaranom kurzore; návrat na začiatok funguje. Mobile unlink/relink a reload správcu aj rodičovská navigácia prešli pri 390 × 844. **412 testov**, check bez upozornení a build prešli. História **23/0** overená priamym TLS; Management dnes **401**. Bez novej migrácie. Podrobnosti: [FAMILY_LINKS.md](FAMILY_LINKS.md). Ďalej finančné detaily/opravné zápisy a nastavenia/notifikácie.
+
+Nasledujú historické míľniky a ich vtedajšie blokátory.
 
 Dokončené browser overenie revokácie trénerstva: **7/7** v headless Chromium nad reálnym testovacím Supabase. Odobratie priradenia zablokuje uloženie otvoreného návrhu; reload odstráni súpis aj ovládanie a nový load odmietne udalosť bez obnovy Auth cookies. Testovacie priradenie obnovené. T3 hostiteľ bol nedostupný; nejde o T3 alebo fyzický mobil. Lokálne check a **406/406 testov** prešli. Nasledujú rodinné a finančné workflow; presné hranice v PROGRESS.md.
 

@@ -252,8 +252,16 @@ export function Dashboard({
                   ))
                 ) : (
                   <Empty
-                    title="Žiadne dostupné deti"
-                    description="Správca klubu vám priradí deti. Pri zmene prepojenia sa ich dostupnosť aktualizuje."
+                    title={
+                      data.childContinued
+                        ? "Na tejto stránke už nie sú žiadne deti"
+                        : "Žiadne dostupné deti"
+                    }
+                    description={
+                      data.childContinued
+                        ? "Prepojenia sa mohli zmeniť. Vráťte sa na začiatok zoznamu a zobrazte aktuálne dostupné deti."
+                        : "Správca klubu vám priradí deti. Pri zmene prepojenia sa ich dostupnosť aktualizuje."
+                    }
                   />
                 )}
                 <Pagination

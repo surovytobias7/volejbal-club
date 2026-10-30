@@ -1,4 +1,18 @@
-# Progress - 2026-10-29
+# Progress - 2026-10-30
+
+## Rodinné prepojenia a stránkovanie — 30. október
+
+- Graphify a aktuálna roadmapa potvrdili dokončenie dochádzkových bodov v commite `4d2ab2a`. Východiskový `main` bol čistý; staré runnery/seedy sa neopakovali. Pokračovanie v hlavnej relácii bez agentov, commitu/pushu alebo nasadenia.
+- Existujúci rodinný modul bol zachovaný. Reprodukovaná chyba rodičovského prehľadu: prázdna stránka za kurzorom tvrdila, že správca ešte musí priradiť deti, aj keď boli na predchádzajúcich stránkach. Regresný test na pôvodnom kóde zlyhal. UI teraz rozlišuje prázdnu rodinu od vyčerpanej stránky a odkáže na existujúce `Na začiatok`. Použité pravidlá Graphify, Supabase/Postgres, systematického ladenia a React; existujúca klubová kompozícia ostáva.
+- Nový opt-in `scripts/live-family-links.mjs`: **18/18 živých Auth/PostgREST kontrol**. Správcovské stránky 25 + 1 s menami; rodičovské stránky po 4, presný celkový počet a bez duplicít; cudzí kurzor/profil, cudzie rodičovské väzby a duplicity odmietnuté. Rodič/hráč/tréner nevytvoria ani neodstránia väzbu. Odpojenie jedinej novej fixture okamžite odoberie rodičovský prehľad/profil pri nezmenenom JWT; väzba druhého rodiča zostane.
+- Vytvorený iba jeden fiktívny rodič bez Auth účtu a 26 fiktívnych hráčskych profilov; 26 väzieb pre nový rodičovský profil a päť pre existujúci testovací rodičovský účet. Jedna z týchto nových piatich väzieb bola pri revokačnom teste odstránená. Bez zmeny starých rodinných väzieb, e-mailov, DDL alebo servisného kľúča. Checkpoint sa rezervuje `wx`; opakovaný pokus bol odmietnutý a hash úspešného reportu zostal nezmenený.
+- Autentifikovaný T3 nad produkčným buildom a živým testom: admin 25 + 1, mobilné odpojenie posledného testovacieho dieťaťa, prázdna pokračovacia stránka, vyhľadanie/opätovné prepojenie a persistencia po novom načítaní. Browser prijal potvrdenie iba pre tento fiktívny unlink. Rodič pri 390 × 844: prvá/druhá stránka po 4 bez správy väzieb/členskej administrácie, žiadne vodorovné pretekanie, opravená prázdna stránka a návrat na prvé štyri deti. Priama URL odpojeného nového dieťaťa zobrazila slovenskú nedostupnú stránku bez jeho mena.
+- **412/412 lokálnych testov v 21 súboroch**, `npm run check` bez upozornení a `npm run build` prešli. Šesť nových prípadov: dva prázdne stavy a štyri rolové kombinácie, každá s odmietnutím link/unlink pred DB dotazom. PGlite nie je náhradou živých testov; vyššie sú uvedené samostatne.
+- Management preflight dnes **401**. Explicitný priamy TLS/read-only preflight s kontrolou testovacieho cieľa a certifikátu potvrdil **23 aplikovaných / 0 čakajúcich**. Bez novej migrácie. Presná evidencia a bezpečné pokračovanie: [FAMILY_LINKS.md](FAMILY_LINKS.md).
+- `graphify update .` obnovil AST graf na **1 140 uzlov / 2 636 hrán / 89 komunít**; dokumenty boli aktualizované priamo. Známe upozornenie extraktora na nesúvisiace `Exercise 7.11 Primes.cs` zostalo bez zmeny súboru. Prettier aj `git diff --check` prešli.
+- Ďalej: finančné detaily/opravné zápisy, potom nastavenia/notifikácie. Fyzický mobil/čítačka, SMTP, obnova záloh, dlhodobý výpadok a nasadenie zostávajú osobitné otvorené brány.
+
+Nasledujú historické výsledky; ich aktuálne blokátory nenahrádzajú stav vyššie.
 
 ## Browser revokácia trénerstva — 29. október
 
